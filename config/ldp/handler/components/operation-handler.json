@@ -11,6 +11,13 @@
           "eTagHandler": { "@id": "urn:solid-server:default:ETagHandler" }
         },
         {
+          "@type": "CreatorPostOperationHandler",
+          "store": { "@id": "urn:solid-server:default:ResourceStore"  },
+          "creatorContainerNames": [ "demands" ],
+          "aclStrategy": { "@id": "urn:solid-server:default:AclStrategy" },
+          "credentialsExtractor": { "@id": "urn:solid-server:default:CredentialsExtractor" }
+        },
+        {
           "@type": "PostOperationHandler",
           "store": { "@id": "urn:solid-server:default:ResourceStore"  }
         },
