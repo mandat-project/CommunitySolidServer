@@ -15,7 +15,10 @@
           "store": { "@id": "urn:solid-server:default:ResourceStore"  },
           "creatorContainerNames": [ "demands" ],
           "aclStrategy": { "@id": "urn:solid-server:default:AclStrategy" },
-          "credentialsExtractor": { "@id": "urn:solid-server:default:CredentialsExtractor" }
+          "credentialsExtractor": { "@id": "urn:solid-server:default:CredentialsExtractor" },
+          "resourceSet": { "@id": "urn:solid-server:default:CachedResourceSet" },
+          "identifierStrategy": { "@id": "urn:solid-server:default:IdentifierStrategy" },
+          "aclStore": { "@id": "urn:solid-server:default:ResourceStore" }
         },
         {
           "@type": "PostOperationHandler",
