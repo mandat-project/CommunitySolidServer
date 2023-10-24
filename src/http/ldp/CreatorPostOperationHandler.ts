@@ -33,7 +33,7 @@ export class CreatorPostOperationHandler extends OperationHandler {
   protected readonly logger = getLoggerFor(this);
 
   private readonly store: ResourceStore;
-  private readonly creatorContainerNames: string[];
+  private readonly creatorContainerNamesAndModes: any[];
   private readonly aclStrategy: AuxiliaryIdentifierStrategy;
   private readonly credentialsExtractor: CredentialsExtractor;
   private readonly resourceSet: ResourceSet;
@@ -42,7 +42,7 @@ export class CreatorPostOperationHandler extends OperationHandler {
 
   public constructor(
     store: ResourceStore,
-    creatorContainerNames: string[],
+    creatorContainerNamesAndModes: any[],
     aclStrategy: AuxiliaryIdentifierStrategy,
     credentialsExtractor: CredentialsExtractor,
     resourceSet: ResourceSet,
@@ -51,7 +51,7 @@ export class CreatorPostOperationHandler extends OperationHandler {
   ) {
     super();
     this.store = store;
-    this.creatorContainerNames = creatorContainerNames;
+    this.creatorContainerNamesAndModes = creatorContainerNamesAndModes;
     this.aclStrategy = aclStrategy;
     this.credentialsExtractor = credentialsExtractor;
     this.resourceSet = resourceSet;
@@ -67,8 +67,8 @@ export class CreatorPostOperationHandler extends OperationHandler {
       throw new NotImplementedHttpError('This handler only handles POST requests to containers');
     }
     let targetPath = trimTrailingSlashes(operation.target.path);
-    let isCreatorContainer = this.creatorContainerNames.map(c => targetPath.endsWith(c)).reduce((a, b) => a || b);
-    if(!isCreatorContainer) {
+    let creatorContainer = this.creatorContainerNamesAndModes.find(([c, _]) => targetPath.endsWith(c));
+    if(!creatorContainer) {
       throw new NotImplementedHttpError('This handler only handles creator containers specified in the config');
     }
   }
@@ -105,13 +105,15 @@ export class CreatorPostOperationHandler extends OperationHandler {
         throw new InternalServerError(message, { cause: error });
       }
 
+      let targetPath = trimTrailingSlashes(input.operation.target.path);
+      let accessModes = this.creatorContainerNamesAndModes.find(([c, _]) => targetPath.endsWith(c))![1];
       const authorization = DataFactory.blankNode();
+      let accessModeQuads: Quad[] = accessModes.map((m: any) => DataFactory.quad(authorization, DataFactory.namedNode(ACL.mode), DataFactory.namedNode(ACL.namespace + (m as String))));
       const quads = [
         DataFactory.quad(authorization, DataFactory.namedNode(RDF.type) , DataFactory.namedNode(ACL.Authorization)),
         DataFactory.quad(authorization, DataFactory.namedNode(ACL.accessTo), DataFactory.namedNode(createdIdentifier.path)),
         DataFactory.quad(authorization, DataFactory.namedNode(ACL.agent), DataFactory.namedNode(agentCredentials.agent.webId)),
-        DataFactory.quad(authorization, DataFactory.namedNode(ACL.mode), DataFactory.namedNode(ACL.Read)),
-      ];
+      ].concat(accessModeQuads);
 
       const subject = this.aclStrategy.getSubjectIdentifier(effectiveAclIdentifier);
       //is Subject
