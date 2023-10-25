@@ -18,7 +18,6 @@ import { OperationHttpHandlerInput } from '../../server/OperationHttpHandler';
 import { RepresentationMetadata } from '../../http/representation/RepresentationMetadata';
 import { BasicRepresentation } from '../../http/representation/BasicRepresentation';
 import { INTERNAL_QUADS, TEXT_TURTLE } from '../../util/ContentTypes';
-import { PermissionReader } from '../../authorization/PermissionReader';
 import { ResourceIdentifier } from '../representation/ResourceIdentifier';
 import { ResourceSet } from '../../storage/ResourceSet';
 import { IdentifierStrategy } from '../../util/identifiers/IdentifierStrategy';
@@ -66,6 +65,8 @@ export class CreatorPostOperationHandler extends OperationHandler {
     if (!isContainerIdentifier(operation.target)) {
       throw new NotImplementedHttpError('This handler only handles POST requests to containers');
     }
+    
+    // Check whether the container identifier ends with one of the configured strings to see if we are responsible
     let targetPath = trimTrailingSlashes(operation.target.path);
     let creatorContainer = this.creatorContainerNamesAndModes.find(([c, _]) => targetPath.endsWith(c));
     if(!creatorContainer) {
@@ -74,12 +75,9 @@ export class CreatorPostOperationHandler extends OperationHandler {
   }
 
   public async handle(input: OperationHttpHandlerInput): Promise<ResponseDescription> {
+    // Solid stuff that the normal POST handler also does
     const type = new Set(input.operation.body.metadata.getAll(RDF.terms.type).map((term: Term): string => term.value));
     const isContainerType = type.has(LDP.Container) || type.has(LDP.BasicContainer);
-    // Solid, §2.1: "A Solid server MUST reject PUT, POST and PATCH requests
-    // without the Content-Type header with a status code of 400."
-    // https://solid.github.io/specification/protocol#http-server
-    // An exception is made for LDP Containers as nothing is done with the body, so a Content-type is not required
     if (!input.operation.body.metadata.contentType && !isContainerType) {
       this.logger.warn('POST requests require the Content-Type header to be set');
       throw new BadRequestHttpError('POST requests require the Content-Type header to be set');
@@ -90,10 +88,25 @@ export class CreatorPostOperationHandler extends OperationHandler {
     if (!createdIdentifier) {
       throw new InternalServerError('Operation was successful but no created identifier was returned.');
     }
-    const agentCredentials = await this.credentialsExtractor.handle(input.request);
-    if(agentCredentials.agent) {
-      const effectiveAclIdentifier = await this.getAclRecursive(createdIdentifier);
 
+    // We need the WebId of the agent that executed the POST request
+    const agentCredentials = await this.credentialsExtractor.handle(input.request);
+
+    if(agentCredentials.agent) {
+      // Create quads for ACL with configured access rights for agent the executed the POST request
+      let targetPath = trimTrailingSlashes(input.operation.target.path);
+      let accessModes = this.creatorContainerNamesAndModes.find(([c, _]) => targetPath.endsWith(c))![1];
+      const authorization = DataFactory.blankNode();
+      let accessModeQuads: Quad[] = accessModes.map((m: any) => DataFactory.quad(authorization, DataFactory.namedNode(ACL.mode), DataFactory.namedNode(ACL.namespace + (m as String))));
+      const quads = [
+        DataFactory.quad(authorization, DataFactory.namedNode(RDF.type) , DataFactory.namedNode(ACL.Authorization)),
+        DataFactory.quad(authorization, DataFactory.namedNode(ACL.accessTo), DataFactory.namedNode(createdIdentifier.path)),
+        DataFactory.quad(authorization, DataFactory.namedNode(ACL.agent), DataFactory.namedNode(agentCredentials.agent.webId)),
+      ].concat(accessModeQuads);
+
+      // Look for the ACL that currently is the effective ACL for the newly created resource and parse the triples
+      // to be able to copy the currently existing access rights to the new ACL
+      const effectiveAclIdentifier = await this.getAclRecursive(createdIdentifier);
       let contents: Store;
       try {
         const data = await this.aclStore.getRepresentation(effectiveAclIdentifier, { type: { [INTERNAL_QUADS]: 1 }});
@@ -105,18 +118,10 @@ export class CreatorPostOperationHandler extends OperationHandler {
         throw new InternalServerError(message, { cause: error });
       }
 
-      let targetPath = trimTrailingSlashes(input.operation.target.path);
-      let accessModes = this.creatorContainerNamesAndModes.find(([c, _]) => targetPath.endsWith(c))![1];
-      const authorization = DataFactory.blankNode();
-      let accessModeQuads: Quad[] = accessModes.map((m: any) => DataFactory.quad(authorization, DataFactory.namedNode(ACL.mode), DataFactory.namedNode(ACL.namespace + (m as String))));
-      const quads = [
-        DataFactory.quad(authorization, DataFactory.namedNode(RDF.type) , DataFactory.namedNode(ACL.Authorization)),
-        DataFactory.quad(authorization, DataFactory.namedNode(ACL.accessTo), DataFactory.namedNode(createdIdentifier.path)),
-        DataFactory.quad(authorization, DataFactory.namedNode(ACL.agent), DataFactory.namedNode(agentCredentials.agent.webId)),
-      ].concat(accessModeQuads);
-
+      // From the old effective ACL throw away all triples with predicate acl:access as they were not meant for the
+      // new resource. acl:default on the other hand affect the new resource so they become _:authorization acl:accessTo
+      // <URI of newresource> .
       const subject = this.aclStrategy.getSubjectIdentifier(effectiveAclIdentifier);
-      //is Subject
       if(createdIdentifier.path !== subject.path) {
         const authorizations = contents.getSubjects(DataFactory.namedNode(ACL.default), null, null);
         for(let a of authorizations) {
@@ -131,6 +136,7 @@ export class CreatorPostOperationHandler extends OperationHandler {
         }
       }
 
+      // Write quads to ACL for new resource
       const aclIdentifier = this.aclStrategy.getAuxiliaryIdentifier(createdIdentifier);
       const serializedQuads = await this.writeQuads(quads);
       const representation = new BasicRepresentation(serializedQuads, new RepresentationMetadata(aclIdentifier, TEXT_TURTLE));
@@ -139,6 +145,9 @@ export class CreatorPostOperationHandler extends OperationHandler {
     return new CreatedResponseDescription(createdIdentifier);
   }
 
+  /*
+    Auxiliary method for serializing quads without callback
+  */
   private async writeQuads(quads: Quad[]): Promise<string> {
     return new Promise((resolve, reject) => {
       const writer = new Writer();
@@ -153,6 +162,9 @@ export class CreatorPostOperationHandler extends OperationHandler {
     });
   }
 
+  /*
+    Auxiliary method for finding the effective ACL of a resource. Copied from another class...
+  */
   private async getAclRecursive(identifier: ResourceIdentifier): Promise<ResourceIdentifier> {
     // Obtain the direct ACL document for the resource, if it exists
     this.logger.debug(`Trying to read the direct ACL document of ${identifier.path}`);
@@ -175,15 +187,5 @@ export class CreatorPostOperationHandler extends OperationHandler {
     }
     const parent = this.identifierStrategy.getParentContainer(identifier);
     return this.getAclRecursive(parent);
-  }
-
-  private async filterStore(store: Store, target: string, directAcl: boolean): Promise<Store> {
-    // Find subjects that occur with a given predicate/object, and collect all their triples
-    const subjectData = new Store();
-    const subjects = store.getSubjects(directAcl ? ACL.terms.accessTo : ACL.terms.default, target, null);
-    for (const subject of subjects) {
-      subjectData.addQuads(store.getQuads(subject, null, null, null));
-    }
-    return subjectData;
   }
 }
