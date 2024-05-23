@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
-/* eslint-disable no-console */
-import * as readline from 'readline';
+/* eslint-disable import/extensions, no-console */
+import * as readline from 'node:readline';
 import simpleGit from 'simple-git';
 import { version } from '../package.json';
 
@@ -18,14 +18,18 @@ import { version } from '../package.json';
  * and then pushes commit and tag.
  */
 async function commitAndTag(): Promise<void> {
+  // eslint-disable-next-line ts/naming-convention
   await simpleGit().commit([], 'CHANGELOG.md', { '--amend': null, '--no-edit': null, '--no-verify': null });
   await simpleGit().addAnnotatedTag(`v${version}`, `Release Version ${version}`);
+  // eslint-disable-next-line ts/naming-convention
   await simpleGit().push({ '--follow-tags': null });
 }
 
 /**
  * Prompts the user for input
+ *
  * @param query - A string to prompt the user
+ *
  * @returns Promise with the input of the user
  */
 async function waitForUserInput(query: string): Promise<string> {

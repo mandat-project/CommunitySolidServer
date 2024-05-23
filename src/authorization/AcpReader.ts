@@ -1,4 +1,4 @@
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 import type { IAccessControlledResource, IContext, IPolicy } from '@solid/access-control-policy';
 import { allowAccessModes } from '@solid/access-control-policy';
 import type { Store } from 'n3';
@@ -65,12 +65,16 @@ export class AcpReader extends PermissionReader {
 
   /**
    * Generates the allowed permissions.
+   *
    * @param target - Target to generate permissions for.
    * @param credentials - Credentials that are trying to access the resource.
    * @param resourceCache - Cache used to store ACR data.
    */
-  private async extractPermissions(target: ResourceIdentifier, credentials: Credentials,
-    resourceCache: IdentifierMap<IAccessControlledResource[]>): Promise<PermissionSet> {
+  private async extractPermissions(
+    target: ResourceIdentifier,
+    credentials: Credentials,
+    resourceCache: IdentifierMap<IAccessControlledResource[]>,
+  ): Promise<PermissionSet> {
     const context = this.createContext(target, credentials);
     const policies: IPolicy[] = [];
 
@@ -85,7 +89,7 @@ export class AcpReader extends PermissionReader {
     }
     const modes = allowAccessModes(policies, context);
 
-    const permissionSet: PermissionSet = { };
+    const permissionSet: PermissionSet = {};
     for (const aclMode of modes) {
       if (aclMode in modesMap) {
         for (const mode of modesMap[aclMode]) {

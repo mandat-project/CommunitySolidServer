@@ -1,5 +1,6 @@
+import type { Json } from '../../util/Json';
 import { ACCOUNT_ID_KEY } from './account/AccountIdRoute';
-import type { Json, JsonRepresentation } from './InteractionUtil';
+import type { JsonRepresentation } from './InteractionUtil';
 import type { JsonInteractionHandlerInput } from './JsonInteractionHandler';
 import { JsonInteractionHandler } from './JsonInteractionHandler';
 import type { InteractionRoute } from './routing/InteractionRoute';
@@ -17,8 +18,10 @@ export class ControlHandler extends JsonInteractionHandler {
   private readonly controls: Record<string, InteractionRoute | JsonInteractionHandler>;
   private readonly source?: JsonInteractionHandler;
 
-  public constructor(controls: Record<string, InteractionRoute | JsonInteractionHandler>,
-    source?: JsonInteractionHandler) {
+  public constructor(
+    controls: Record<string, InteractionRoute | JsonInteractionHandler>,
+    source?: JsonInteractionHandler,
+  ) {
     super();
     this.controls = controls;
     this.source = source;
@@ -60,8 +63,10 @@ export class ControlHandler extends JsonInteractionHandler {
     return controls;
   }
 
-  protected async generateControlSet(input: JsonInteractionHandlerInput,
-    value: InteractionRoute | JsonInteractionHandler): Promise<Json | undefined> {
+  protected async generateControlSet(
+    input: JsonInteractionHandlerInput,
+    value: InteractionRoute | JsonInteractionHandler,
+  ): Promise<Json | undefined> {
     if (this.isRoute(value)) {
       try {
         return value.getPath({ [ACCOUNT_ID_KEY]: input.accountId });

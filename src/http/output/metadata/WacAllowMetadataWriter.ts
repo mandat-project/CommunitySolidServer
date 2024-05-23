@@ -1,4 +1,4 @@
-import type { Term } from 'rdf-js';
+import type { Term } from '@rdfjs/types';
 import type { HttpResponse } from '../../../server/HttpResponse';
 import { addHeader } from '../../../util/HeaderUtil';
 import { ACL, AUTH } from '../../../util/Vocabularies';
@@ -33,7 +33,7 @@ export class WacAllowMetadataWriter extends MetadataWriter {
     }
   }
 
-  private aclToPermission(aclTerm: Term): string {
+  private aclToPermission(this: void, aclTerm: Term): string {
     return aclTerm.value.slice(ACL.namespace.length).toLowerCase();
   }
 

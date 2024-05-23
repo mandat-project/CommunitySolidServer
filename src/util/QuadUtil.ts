@@ -1,15 +1,15 @@
-import type { Readable } from 'stream';
-import type { NamedNode } from '@rdfjs/types';
+import type { Readable } from 'node:stream';
+import type { NamedNode, Quad, Term } from '@rdfjs/types';
 import arrayifyStream from 'arrayify-stream';
 import type { ParserOptions } from 'n3';
 import { StreamParser, StreamWriter } from 'n3';
-import type { Quad, Term } from 'rdf-js';
 import type { Guarded } from './GuardedStream';
 import { guardedStreamFrom, pipeSafely } from './StreamUtil';
 import { toNamedTerm } from './TermUtil';
 
 /**
  * Helper function for serializing an array of quads, with as result a Readable object.
+ *
  * @param quads - The array of quads.
  * @param contentType - The content-type to serialize to.
  *
@@ -21,6 +21,7 @@ export function serializeQuads(quads: Quad[], contentType?: string): Guarded<Rea
 
 /**
  * Helper function to convert a Readable into an array of quads.
+ *
  * @param readable - The readable object.
  * @param options - Options for the parser.
  *
@@ -32,17 +33,19 @@ export async function parseQuads(readable: Guarded<Readable>, options: ParserOpt
 
 /**
  * Filter out duplicate quads from an array.
+ *
  * @param quads - Quads to filter.
  *
  * @returns A new array containing the unique quads.
  */
 export function uniqueQuads(quads: Quad[]): Quad[] {
-  return quads.reduce<Quad[]>((result, quad): Quad[] => {
-    if (!result.some((item): boolean => quad.equals(item))) {
-      result.push(quad);
+  const uniques: Quad[] = [];
+  for (const quad of quads) {
+    if (!uniques.some((item): boolean => quad.equals(item))) {
+      uniques.push(quad);
     }
-    return result;
-  }, []);
+  }
+  return uniques;
 }
 
 /**
@@ -71,8 +74,8 @@ export class FilterPattern {
    * @param object - Optionally filter based on a specific object.
    */
   public constructor(subject?: string, predicate?: string, object?: string) {
-    this.subject = typeof subject !== 'undefined' ? toNamedTerm(subject) : null;
-    this.predicate = typeof predicate !== 'undefined' ? toNamedTerm(predicate) : null;
-    this.object = typeof object !== 'undefined' ? toNamedTerm(object) : null;
+    this.subject = typeof subject === 'string' ? toNamedTerm(subject) : null;
+    this.predicate = typeof predicate === 'string' ? toNamedTerm(predicate) : null;
+    this.object = typeof object === 'string' ? toNamedTerm(object) : null;
   }
 }

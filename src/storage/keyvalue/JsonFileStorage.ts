@@ -1,4 +1,4 @@
-import { writeJson, readJson } from 'fs-extra';
+import { readJson, writeJson } from 'fs-extra';
 import type { ResourceIdentifier } from '../../http/representation/ResourceIdentifier';
 import { isSystemError } from '../../util/errors/SystemError';
 import type { ReadWriteLocker } from '../../util/locking/ReadWriteLocker';
@@ -61,6 +61,7 @@ export class JsonFileStorage implements KeyValueStorage<string, unknown> {
 
   /**
    * Updates the data in the JSON file while using a write lock.
+   *
    * @param updateFn - A function that updates the JSON object.
    *
    * @returns The return value of `updateFn`.
@@ -79,7 +80,7 @@ export class JsonFileStorage implements KeyValueStorage<string, unknown> {
    */
   private async getJson(): Promise<NodeJS.Dict<unknown>> {
     try {
-      return await readJson(this.filePath, 'utf8');
+      return await readJson(this.filePath, 'utf8') as NodeJS.Dict<unknown>;
     } catch (error: unknown) {
       if (isSystemError(error) && error.code === 'ENOENT') {
         return {};

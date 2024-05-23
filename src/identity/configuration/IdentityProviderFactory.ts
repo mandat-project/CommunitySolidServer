@@ -1,16 +1,16 @@
-/* eslint-disable @typescript-eslint/naming-convention, tsdoc/syntax */
-// import/no-unresolved can't handle jose imports
-// tsdoc/syntax can't handle {json} parameter
-import { randomBytes } from 'crypto';
-import type { Account,
+/* eslint-disable ts/naming-convention */
+import { randomBytes } from 'node:crypto';
+import type {
+  Account,
   Adapter,
   AsymmetricSigningAlgorithm,
   Configuration,
   ErrorOut,
+  errors,
   KoaContextWithOIDC,
   ResourceServer,
   UnknownObject,
-  errors } from '../../../templates/types/oidc-provider';
+} from '../../../templates/types/oidc-provider';
 import type Provider from '../../../templates/types/oidc-provider';
 import type { ErrorHandler } from '../../http/output/error/ErrorHandler';
 import type { ResponseWriter } from '../../http/output/ResponseWriter';
@@ -56,9 +56,9 @@ export interface IdentityProviderFactoryArgs {
    */
   clientCredentialsStore: ClientCredentialsStore;
   /**
-   * Storage used to store cookie keys so they can be re-used in case of multithreading.
+   * Storage used to store cookie keys, so they can be re-used in case of multithreading.
    */
-  storage: KeyValueStorage<string, unknown>;
+  storage: KeyValueStorage<string, string[]>;
   /**
    * Generates the JWK used for signing and decryption.
    */
@@ -82,7 +82,7 @@ const COOKIES_KEY = 'cookie-secret';
 /**
  * Creates an OIDC Provider based on the provided configuration and parameters.
  * The provider will be cached and returned on subsequent calls.
- * Cookie and JWT keys will be stored in an internal storage so they can be re-used over multiple threads.
+ * Cookie and JWT keys will be stored in an internal storage, so they can be re-used over multiple threads.
  * Necessary claims for Solid OIDC interactions will be added.
  * Routes will be updated based on the `baseUrl` and `oidcPath`.
  */
@@ -96,7 +96,7 @@ export class IdentityProviderFactory implements ProviderFactory {
   private readonly oidcPath: string;
   private readonly interactionRoute: InteractionRoute;
   private readonly clientCredentialsStore: ClientCredentialsStore;
-  private readonly storage: KeyValueStorage<string, unknown>;
+  private readonly storage: KeyValueStorage<string, string[]>;
   private readonly jwkGenerator: JwkGenerator;
   private readonly showStackTrace: boolean;
   private readonly errorHandler: ErrorHandler;
@@ -156,6 +156,7 @@ export class IdentityProviderFactory implements ProviderFactory {
     await this.promptFactory.handleSafe(policy);
     config.interactions!.policy = policy;
 
+    // eslint-disable-next-line new-cap
     const provider = new oidcImport.default(this.baseUrl, config);
 
     // Allow provider to interpret reverse proxy headers.
@@ -186,14 +187,20 @@ export class IdentityProviderFactory implements ProviderFactory {
     provider.use(async(ctx, next): Promise<void> => {
       const accepts = ctx.accepts.bind(ctx);
 
-      // Using `any` typings to make sure we support all different versions of `ctx.accepts`
-      ctx.accepts = (...types: any[]): any => {
+      // This is how you get the correct typing for an overloaded function
+      type AcceptFn = {
+        (): string[];
+        (...types: string[]): string | false;
+        (types: string[]): string | false;
+      };
+
+      ctx.accepts = ((...types): string[] | string | false => {
         // Make sure we only override our specific case
         if (types.length === 2 && types[0] === 'json' && types[1] === 'html') {
           return 'html';
         }
-        return accepts(...types);
-      };
+        return accepts(...types as string[]);
+      }) as AcceptFn;
 
       return next();
     });
@@ -205,7 +212,7 @@ export class IdentityProviderFactory implements ProviderFactory {
    */
   private async initConfig(key: AlgJwk): Promise<Configuration> {
     // Create a deep copy
-    const config: Configuration = JSON.parse(JSON.stringify(this.config));
+    const config = JSON.parse(JSON.stringify(this.config)) as Configuration;
 
     // Indicates which Adapter should be used for storing oidc data
     // The adapter function MUST be a named function.
@@ -253,11 +260,11 @@ export class IdentityProviderFactory implements ProviderFactory {
   }
 
   /**
-   * Checks if the given token is an access token.
-   * The AccessToken interface is not exported so we have to access it like this.
+   * Checks whether the given token is an access token.
+   * The AccessToken interface is not exported, so we have to access it like this.
    */
-  private isAccessToken(token: any): token is KoaContextWithOIDC['oidc']['accessToken'] {
-    return token.kind === 'AccessToken';
+  private isAccessToken(token: unknown): token is KoaContextWithOIDC['oidc']['accessToken'] {
+    return (token as KoaContextWithOIDC['oidc']['accessToken'])?.kind === 'AccessToken';
   }
 
   /**
@@ -269,7 +276,7 @@ export class IdentityProviderFactory implements ProviderFactory {
     // Some fields are still missing, see https://github.com/CommunitySolidServer/CommunitySolidServer/issues/1154#issuecomment-1040233385
     config.findAccount = async(ctx: KoaContextWithOIDC, sub: string): Promise<Account> => ({
       accountId: sub,
-      async claims(): Promise<{ sub: string; [key: string]: any }> {
+      async claims(): Promise<{ sub: string; [key: string]: unknown }> {
         return { sub, webid: sub, azp: ctx.oidc.client?.clientId };
       },
     });
@@ -400,7 +407,8 @@ export class IdentityProviderFactory implements ProviderFactory {
       // so we want to provide a more detailed error message explaining what to do.
       if (oidcError.error_description === 'client is invalid' && oidcError.error_detail === 'client not found') {
         const unknownClientError = new BadRequestHttpError(
-          'Unknown client, you might need to clear the local storage on the client.', {
+          'Unknown client, you might need to clear the local storage on the client.',
+          {
             errorCode: 'E0003',
             metadata: errorTermsToMetadata({
               client_id: ctx.request.query.client_id as string,

@@ -90,7 +90,6 @@ jest.mock('../../../src/init/cluster/SingleThreaded', (): any => ({
 }));
 
 jest.mock('componentsjs', (): any => ({
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   ComponentsManager: {
     build: jest.fn(async(): Promise<ComponentsManager<App>> => manager),
   },
@@ -116,7 +115,7 @@ const packageJSON = {
   },
 };
 
-jest.mock('fs', (): Partial<Record<string, jest.Mock>> => ({
+jest.mock('node:fs', (): Partial<Record<string, jest.Mock>> => ({
   cwd: jest.fn((): string => __dirname),
   existsSync: jest.fn((pth: string): boolean => typeof pth === 'string' && pth in files),
 }));
@@ -198,11 +197,34 @@ describe('AppRunner', (): void => {
         .toHaveBeenCalledWith(joinFilePath(__dirname, '/../../../config/default.json'));
       expect(manager.instantiate).toHaveBeenCalledTimes(2);
       expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
-      expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: expectedVariables },
-      );
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: expectedVariables });
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenLastCalledWith(shorthand);
+      expect(cliExtractor.handleSafe).toHaveBeenCalledTimes(0);
+      expect(app.start).toHaveBeenCalledTimes(0);
+      expect(app.clusterManager.isSingleThreaded()).toBeFalsy();
+    });
+
+    it('has several defaults.', async(): Promise<void> => {
+      const createdApp = await new AppRunner().create();
+      expect(createdApp).toBe(app);
+
+      expect(ComponentsManager.build).toHaveBeenCalledTimes(1);
+      expect(ComponentsManager.build).toHaveBeenCalledWith({
+        mainModulePath: joinFilePath(__dirname, '../../../'),
+        typeChecking: false,
+        dumpErrorState: false,
+      });
+      expect(manager.configRegistry.register).toHaveBeenCalledTimes(1);
+      expect(manager.configRegistry.register)
+        .toHaveBeenCalledWith(joinFilePath(__dirname, '/../../../config/default.json'));
+      expect(manager.instantiate).toHaveBeenCalledTimes(2);
+      expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: {}});
+      expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
+      expect(shorthandResolver.handleSafe).toHaveBeenLastCalledWith({});
       expect(cliExtractor.handleSafe).toHaveBeenCalledTimes(0);
       expect(app.start).toHaveBeenCalledTimes(0);
       expect(app.clusterManager.isSingleThreaded()).toBeFalsy();
@@ -324,7 +346,9 @@ describe('AppRunner', (): void => {
       expect(manager.instantiate).toHaveBeenCalledTimes(2);
       expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
       expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: expectedVariables },
+        2,
+        'urn:solid-server:default:App',
+        { variables: expectedVariables },
       );
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenLastCalledWith(shorthand);
@@ -344,6 +368,7 @@ describe('AppRunner', (): void => {
         logLevel: 'info',
         mainModulePath: joinFilePath(__dirname, '../../../'),
         typeChecking: false,
+        dumpErrorState: false,
       });
       expect(manager.configRegistry.register).toHaveBeenCalledTimes(1);
       expect(manager.configRegistry.register)
@@ -355,18 +380,19 @@ describe('AppRunner', (): void => {
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenCalledWith(defaultParameters);
       expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
-      expect(manager.instantiate).toHaveBeenNthCalledWith(2,
-        'urn:solid-server:default:App',
-        { variables: defaultVariables });
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: defaultVariables });
       expect(app.clusterManager.isSingleThreaded()).toBeFalsy();
       expect(app.start).toHaveBeenCalledTimes(0);
     });
 
     it('can apply multiple configurations.', async(): Promise<void> => {
+      /* eslint-disable antfu/consistent-list-newline */
       const params = [
         'node', 'script',
         '-c', 'config1.json', 'config2.json',
       ];
+      /* eslint-enable antfu/consistent-list-newline */
       await expect(new AppRunner().createCli(params)).resolves.toBe(app);
 
       expect(ComponentsManager.build).toHaveBeenCalledTimes(1);
@@ -374,6 +400,7 @@ describe('AppRunner', (): void => {
         logLevel: 'info',
         mainModulePath: joinFilePath(__dirname, '../../../'),
         typeChecking: false,
+        dumpErrorState: false,
       });
       expect(manager.configRegistry.register).toHaveBeenCalledTimes(2);
       expect(manager.configRegistry.register).toHaveBeenNthCalledWith(1, '/var/cwd/config1.json');
@@ -385,15 +412,15 @@ describe('AppRunner', (): void => {
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenCalledWith(defaultParameters);
       expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
-      expect(manager.instantiate).toHaveBeenNthCalledWith(2,
-        'urn:solid-server:default:App',
-        { variables: defaultVariables });
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: defaultVariables });
       expect(app.clusterManager.isSingleThreaded()).toBeFalsy();
       expect(app.start).toHaveBeenCalledTimes(0);
     });
 
     it('uses the default process.argv in case none are provided.', async(): Promise<void> => {
       const { argv } = process;
+      /* eslint-disable antfu/consistent-list-newline */
       const argvParameters = [
         'node', 'script',
         '-b', 'http://pod.example/',
@@ -408,6 +435,7 @@ describe('AppRunner', (): void => {
         '--seededPodConfigJson', '/different-path.json',
         '-w', '1',
       ];
+      /* eslint-enable antfu/consistent-list-newline */
       process.argv = argvParameters;
 
       await expect(new AppRunner().createCli()).resolves.toBe(app);
@@ -417,6 +445,7 @@ describe('AppRunner', (): void => {
         logLevel: 'debug',
         mainModulePath: '/var/cwd/module/path',
         typeChecking: false,
+        dumpErrorState: false,
       });
       expect(manager.configRegistry.register).toHaveBeenCalledTimes(1);
       expect(manager.configRegistry.register).toHaveBeenCalledWith('/var/cwd/myconfig.json');
@@ -427,9 +456,8 @@ describe('AppRunner', (): void => {
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenCalledWith(defaultParameters);
       expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
-      expect(manager.instantiate).toHaveBeenNthCalledWith(2,
-        'urn:solid-server:default:App',
-        { variables: defaultVariables });
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: defaultVariables });
       expect(app.start).toHaveBeenCalledTimes(0);
       expect(app.clusterManager.isSingleThreaded()).toBeFalsy();
 
@@ -439,7 +467,7 @@ describe('AppRunner', (): void => {
     it('checks for threading issues when starting in multithreaded mode.', async(): Promise<void> => {
       const createdApp = await new AppRunner().createCli();
       expect(createdApp).toBe(app);
-      expect(listSingleThreadedComponentsMock).toHaveBeenCalled();
+      expect(listSingleThreadedComponentsMock).toHaveBeenCalledWith();
     });
 
     it('throws an error if there are threading issues detected.', async(): Promise<void> => {
@@ -568,6 +596,7 @@ describe('AppRunner', (): void => {
         logLevel: 'info',
         mainModulePath: joinFilePath(__dirname, '../../../'),
         typeChecking: false,
+        dumpErrorState: false,
       });
       expect(manager.configRegistry.register).toHaveBeenCalledTimes(1);
       expect(manager.configRegistry.register)
@@ -579,9 +608,8 @@ describe('AppRunner', (): void => {
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenCalledWith(defaultParameters);
       expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
-      expect(manager.instantiate).toHaveBeenNthCalledWith(2,
-        'urn:solid-server:default:App',
-        { variables: defaultVariables });
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: defaultVariables });
       expect(app.start).toHaveBeenCalledTimes(1);
       expect(app.start).toHaveBeenLastCalledWith();
       expect(app.clusterManager.isSingleThreaded()).toBeFalsy();
@@ -600,6 +628,7 @@ describe('AppRunner', (): void => {
         logLevel: 'debug',
         mainModulePath: joinFilePath(__dirname, '../../../'),
         typeChecking: false,
+        dumpErrorState: false,
       });
       expect(manager.configRegistry.register).toHaveBeenCalledTimes(1);
       expect(manager.configRegistry.register)
@@ -610,9 +639,8 @@ describe('AppRunner', (): void => {
       expect(cliExtractor.handleSafe).toHaveBeenCalledWith([ 'node', 'script' ]);
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenCalledWith(defaultParameters);
-      expect(manager.instantiate).toHaveBeenNthCalledWith(2,
-        'urn:solid-server:default:App',
-        { variables: defaultVariables });
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: defaultVariables });
       expect(app.start).toHaveBeenCalledTimes(1);
       expect(app.start).toHaveBeenLastCalledWith();
 
@@ -629,9 +657,7 @@ describe('AppRunner', (): void => {
       defaultVariables = {};
 
       await expect(new AppRunner().runCli()).resolves.toBeUndefined();
-      expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: {}},
-      );
+      expect(manager.instantiate).toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: {}});
     });
 
     it('runs honouring package.json configuration.', async(): Promise<void> => {
@@ -641,7 +667,9 @@ describe('AppRunner', (): void => {
 
       await expect(new AppRunner().runCli()).resolves.toBeUndefined();
       expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: {
+        2,
+        'urn:solid-server:default:App',
+        { variables: {
           'urn:solid-server:default:variable:port': 3101,
           'urn:solid-server:default:variable:loggingLevel': 'error',
         }},
@@ -655,7 +683,9 @@ describe('AppRunner', (): void => {
 
       await expect(new AppRunner().runCli()).resolves.toBeUndefined();
       expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: {}},
+        2,
+        'urn:solid-server:default:App',
+        { variables: {}},
       );
     });
 
@@ -669,7 +699,9 @@ describe('AppRunner', (): void => {
 
       await expect(new AppRunner().runCli()).resolves.toBeUndefined();
       expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: {
+        2,
+        'urn:solid-server:default:App',
+        { variables: {
           'urn:solid-server:default:variable:port': 3101,
           'urn:solid-server:default:variable:loggingLevel': 'error',
         }},
@@ -687,7 +719,9 @@ describe('AppRunner', (): void => {
 
       await expect(new AppRunner().runCli()).resolves.toBeUndefined();
       expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: {
+        2,
+        'urn:solid-server:default:App',
+        { variables: {
           'urn:solid-server:default:variable:port': 3101,
           'urn:solid-server:default:variable:loggingLevel': 'error',
         }},
@@ -701,7 +735,9 @@ describe('AppRunner', (): void => {
 
       await expect(new AppRunner().runCli()).resolves.toBeUndefined();
       expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: {}},
+        2,
+        'urn:solid-server:default:App',
+        { variables: {}},
       );
     });
 
@@ -714,7 +750,9 @@ describe('AppRunner', (): void => {
 
       await expect(new AppRunner().runCli()).resolves.toBeUndefined();
       expect(manager.instantiate).toHaveBeenNthCalledWith(
-        2, 'urn:solid-server:default:App', { variables: {}},
+        2,
+        'urn:solid-server:default:App',
+        { variables: {}},
       );
     });
 
@@ -751,6 +789,7 @@ describe('AppRunner', (): void => {
         logLevel: 'info',
         mainModulePath: joinFilePath(__dirname, '../../../'),
         typeChecking: false,
+        dumpErrorState: false,
       });
       expect(manager.configRegistry.register).toHaveBeenCalledTimes(1);
       expect(manager.configRegistry.register)
@@ -762,9 +801,8 @@ describe('AppRunner', (): void => {
       expect(shorthandResolver.handleSafe).toHaveBeenCalledTimes(1);
       expect(shorthandResolver.handleSafe).toHaveBeenCalledWith(defaultParameters);
       expect(manager.instantiate).toHaveBeenNthCalledWith(1, 'urn:solid-server-app-setup:default:CliResolver', {});
-      expect(manager.instantiate).toHaveBeenNthCalledWith(2,
-        'urn:solid-server:default:App',
-        { variables: defaultVariables });
+      expect(manager.instantiate)
+        .toHaveBeenNthCalledWith(2, 'urn:solid-server:default:App', { variables: defaultVariables });
       expect(app.start).toHaveBeenCalledTimes(1);
       expect(app.start).toHaveBeenLastCalledWith();
       expect(app.clusterManager.isSingleThreaded()).toBeFalsy();

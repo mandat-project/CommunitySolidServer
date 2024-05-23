@@ -19,7 +19,9 @@ describe('A BaseIdentifierStrategy', (): void => {
   describe('getParentContainer', (): void => {
     it('returns the parent identifier.', async(): Promise<void> => {
       expect(strategy.getParentContainer({ path: 'http://example.com/foo/bar' })).toEqual({ path: 'http://example.com/foo/' });
+      expect(strategy.getParentContainer({ path: 'http://example.com/foo//' })).toEqual({ path: 'http://example.com/' });
       expect(strategy.getParentContainer({ path: 'http://example.com/foo/bar/' })).toEqual({ path: 'http://example.com/foo/' });
+      expect(strategy.getParentContainer({ path: 'http://example.com/foo/bar?q=5' })).toEqual({ path: 'http://example.com/foo/' });
     });
 
     it('errors when attempting to get the parent of an unsupported identifier.', async(): Promise<void> => {
@@ -29,8 +31,10 @@ describe('A BaseIdentifierStrategy', (): void => {
       } catch (err: unknown) {
         error = err;
       }
-      expect(error).toEqual(expect.objectContaining({ errorCode: 'E0001',
-        message: 'The identifier /unsupported is outside the configured identifier space.' }));
+      expect(error).toEqual(expect.objectContaining({
+        errorCode: 'E0001',
+        message: 'The identifier /unsupported is outside the configured identifier space.',
+      }));
       expect(InternalServerError.isInstance(error)).toBe(true);
       expect(extractErrorTerms((error as InternalServerError).metadata)).toEqual({ path: '/unsupported' });
     });

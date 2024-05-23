@@ -8,6 +8,7 @@ import { errorTermsToMetadata } from '../../util/errors/HttpErrorUtil';
 import { fetchDataset } from '../../util/FetchUtil';
 import { SOLID } from '../../util/Vocabularies';
 import { OwnershipValidator } from './OwnershipValidator';
+
 const { literal, namedNode, quad } = DataFactory;
 
 /**
@@ -50,7 +51,7 @@ export class TokenOwnershipValidator extends OwnershipValidator {
    * Creates a key to use with the token storage.
    */
   private getTokenKey(webId: string): string {
-    return `ownershipToken${webId}`;
+    return encodeURIComponent(webId);
   }
 
   /**

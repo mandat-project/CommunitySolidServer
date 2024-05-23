@@ -28,6 +28,7 @@ export class IdentityTestState {
 
   /**
    * Performs a fetch call while keeping track of the stored cookies and preventing redirects.
+   *
    * @param url - URL to call.
    * @param method - Method to use.
    * @param body - Body to send along. If this is not a string it will be JSONified.
@@ -53,7 +54,6 @@ export class IdentityTestState {
       for (const cookie of newCookies) {
         this.cookies.set(cookie.name, cookie);
       }
-      // eslint-disable-next-line unicorn/prefer-spread
       this.cookie = Array.from(this.cookies, ([ , nom ]): string => `${nom.name}=${nom.value}`).join('; ');
     }
     return res;
@@ -105,10 +105,7 @@ export class IdentityTestState {
     const url = await this.handleLocationRedirect(res);
     expect(url.startsWith(this.redirectUrl)).toBe(true);
 
-    // Workaround for https://github.com/inrupt/solid-client-authn-js/issues/2985
-    const strippedUrl = new URL(url);
-    strippedUrl.searchParams.delete('iss');
-    const info = await this.session.handleIncomingRedirect(strippedUrl.href);
+    const info = await this.session.handleIncomingRedirect(url);
     expect(info?.isLoggedIn).toBe(true);
     expect(info?.webId).toBe(webId);
   }

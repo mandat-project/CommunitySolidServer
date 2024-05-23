@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import { ensureDir, remove } from 'fs-extra';
 import type { LockOptions, UnlockOptions } from 'proper-lockfile';
 import { lock, unlock } from 'proper-lockfile';
@@ -71,6 +71,7 @@ export class FileSystemResourceLocker implements ResourceLocker, Initializable, 
 
   /**
    * Create a new FileSystemResourceLocker
+   *
    * @param args - Configures the locker using the specified FileSystemResourceLockerArgs instance.
    */
   public constructor(args: FileSystemResourceLockerArgs) {
@@ -85,7 +86,9 @@ export class FileSystemResourceLocker implements ResourceLocker, Initializable, 
    * Wrapper function for all (un)lock operations. Any errors coming from the `fn()` will be swallowed.
    * Only `ENOTACQUIRED` errors wills be thrown (trying to release lock that didn't exist).
    * This wrapper returns undefined because {@link retryFunction} expects that when a retry needs to happen.
+   *
    * @param fn - The function reference to swallow errors from.
+   *
    * @returns Boolean or undefined.
    */
   private swallowErrors(fn: () => Promise<unknown>): () => Promise<unknown> {
@@ -112,8 +115,10 @@ export class FileSystemResourceLocker implements ResourceLocker, Initializable, 
         this.attemptSettings,
       );
     } catch (err: unknown) {
-      throw new InternalServerError(`Error trying to acquire lock for ${path}. ${createErrorMessage(err)}`,
-        { cause: err });
+      throw new InternalServerError(
+        `Error trying to acquire lock for ${path}. ${createErrorMessage(err)}`,
+        { cause: err },
+      );
     }
   }
 
@@ -127,14 +132,18 @@ export class FileSystemResourceLocker implements ResourceLocker, Initializable, 
         this.attemptSettings,
       );
     } catch (err: unknown) {
-      throw new InternalServerError(`Error trying to release lock for ${path}.  ${createErrorMessage(err)}`,
-        { cause: err });
+      throw new InternalServerError(
+        `Error trying to release lock for ${path}.  ${createErrorMessage(err)}`,
+        { cause: err },
+      );
     }
   }
 
   /**
    * Map the identifier path to a unique path inside the {@link lockFolder}.
+   *
    * @param identifier - ResourceIdentifier to generate (Un)LockOptions for.
+   *
    * @returns Full path.
    */
   private toLockfilePath(identifier: ResourceIdentifier): string {
@@ -144,12 +153,14 @@ export class FileSystemResourceLocker implements ResourceLocker, Initializable, 
   }
 
   /**
- * Generate LockOptions or UnlockOptions depending on the type of defauls given.
- * A custom lockFilePath mapping strategy will be used.
- * @param identifier - ResourceIdentifier to generate (Un)LockOptions for
- * @param defaults - The default options. (lockFilePath will get overwritten)
- * @returns LockOptions or UnlockOptions
- */
+   * Generate LockOptions or UnlockOptions depending on the type of defauls given.
+   * A custom lockFilePath mapping strategy will be used.
+   *
+   * @param identifier - ResourceIdentifier to generate (Un)LockOptions for
+   * @param defaults - The default options. (lockFilePath will get overwritten)
+   *
+   * @returns LockOptions or UnlockOptions
+   */
   private generateOptions<T>(identifier: ResourceIdentifier, defaults: T): T {
     const lockfilePath = this.toLockfilePath(identifier);
     return {
@@ -184,7 +195,7 @@ export class FileSystemResourceLocker implements ResourceLocker, Initializable, 
    * Once the locker was finalized, it will log the provided error instead of throwing it
    * This allows for a clean shutdown procedure.
    */
-  private customOnCompromised(err: any): void {
+  private customOnCompromised(err: Error): void {
     if (!this.finalized) {
       throw err;
     }

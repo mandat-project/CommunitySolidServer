@@ -63,6 +63,8 @@ describe('A server migrating from v6', (): void => {
     // Setup resources should have been migrated
     const setupDir = await readdir(joinFilePath(rootFilePath, '.internal/setup/'));
     expect(setupDir).toEqual([
+      // Invalid JSON file was not deleted, only error was logged. Just in case its data needs to be saved.
+      'aW52YWxpZFJlc291cmNl$.json',
       'current-base-url$.json',
       'current-server-version$.json',
       'setupCompleted-2.0$.json',
@@ -102,9 +104,11 @@ describe('A server migrating from v6', (): void => {
     let res = await state.fetchIdp(url);
     expect(res.status).toBe(200);
     const { controls } = await res.json();
-    res = await state.fetchIdp(controls.password.login,
+    res = await state.fetchIdp(
+      controls.password.login,
       'POST',
-      JSON.stringify({ email: 'test@example.com', password: 'password' }));
+      JSON.stringify({ email: 'test@example.com', password: 'password' }),
+    );
     await state.handleLocationRedirect(res);
 
     res = await state.fetchIdp(controls.oidc.webId);
@@ -134,8 +138,8 @@ describe('A server migrating from v6', (): void => {
   it('still supports the existing client credentials.', async(): Promise<void> => {
     // These are the values stored in the original assets
     const id = 'token_fd13b73d-2527-4280-82af-278e5b8fe607';
-    // eslint-disable-next-line max-len
-    const secret = 'a809d7ce5daf0e9acd457c91d712ff05038e4a87192e27191c837602bd4b370c633282864c133650b0e9a35b59018b064157532642f628affb2f79e81999e898';
+    const secret = 'a809d7ce5daf0e9acd457c91d712ff05038e4a87192e27191c837602bd4b' +
+      '370c633282864c133650b0e9a35b59018b064157532642f628affb2f79e81999e898';
     const tokenUrl = joinUrl(baseUrl, '.oidc/token');
     const dpopHeader = await createDpopHeader(tokenUrl, 'POST', await generateDpopKeyPair());
     const authString = `${encodeURIComponent(id)}:${encodeURIComponent(secret)}`;

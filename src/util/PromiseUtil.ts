@@ -1,10 +1,11 @@
-import { types } from 'util';
+import { types } from 'node:util';
 import { createAggregateError } from './errors/HttpErrorUtil';
 
 export type PromiseOrValue<T> = T | Promise<T>;
 
 /**
  * Verifies if the given value is a Promise or not.
+ *
  * @param object - Object to check.
  */
 export function isPromise<T>(object: PromiseOrValue<T>): object is Promise<T> {
@@ -24,7 +25,6 @@ PromiseOrValue<TOut> {
   return callback(object);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 function noop(): void {}
 
 /**
@@ -46,7 +46,7 @@ export async function promiseSome(predicates: Promise<boolean>[]): Promise<boole
         resolve(true);
       }
     }
-    Promise.all(predicates.map((predicate): Promise<void> => predicate.then(resolveIfTrue, noop)))
+    Promise.all(predicates.map(async(predicate): Promise<void> => predicate.then(resolveIfTrue, noop)))
       .then((): void => resolve(false), noop);
   });
 }
@@ -63,7 +63,7 @@ export async function allFulfilled<T>(promises: Promise<T> [], ignoreErrors = fa
     if (result.status === 'fulfilled') {
       values.push(result.value);
     } else if (!ignoreErrors) {
-      errors.push(result.reason);
+      errors.push(result.reason as Error);
     }
   }
 

@@ -11,8 +11,10 @@ export interface SingleThreaded {}
 
 /**
  * Convert an exported interface name to the properly expected Components.js type URI.
+ *
  * @param componentsManager - The currently used ComponentsManager
  * @param interfaceName - An interface name
+ *
  * @returns A Components.js type URI
  */
 export async function toComponentsJsType<T>(componentsManager: ComponentsManager<T>, interfaceName: string):
@@ -23,7 +25,7 @@ Promise<string> {
     skipValidation: true,
   });
   // The keys of the package.json `lsd:contexts` array contains all the IRIs of the relevant contexts;
-  const lsdContexts = Object.keys(pkg['lsd:contexts']);
+  const lsdContexts = Object.keys(pkg['lsd:contexts'] as Record<string, string>);
   // Feed the lsd:context IRIs to the ContextParser
   const cssContext = await contextParser.parse(lsdContexts);
   // We can now expand a simple interface name, to its full Components.js type identifier.
@@ -38,6 +40,7 @@ Promise<string> {
 /**
  * Will list class names of components instantiated implementing the {@link SingleThreaded}
  * interface while the application is being run in multithreaded mode.
+ *
  * @param componentsManager - The componentsManager being used to set up the application
  */
 export async function listSingleThreadedComponents<T>(componentsManager: ComponentsManager<T>): Promise<string[]> {

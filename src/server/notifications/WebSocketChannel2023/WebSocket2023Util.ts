@@ -1,8 +1,9 @@
-import type { IncomingMessage } from 'http';
+import type { IncomingMessage } from 'node:http';
 import { BadRequestHttpError } from '../../../util/errors/BadRequestHttpError';
 
 /**
  * Generates a WebSocket URL by converting an HTTP(S) URL into a WS(S) URL.
+ *
  * @param id - The identifier of the channel. Needs to be a URL.
  */
 export function generateWebSocketUrl(id: string): string {

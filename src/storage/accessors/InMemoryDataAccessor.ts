@@ -1,4 +1,4 @@
-import type { Readable } from 'stream';
+import type { Readable } from 'node:stream';
 import arrayifyStream from 'arrayify-stream';
 import { RepresentationMetadata } from '../../http/representation/RepresentationMetadata';
 import type { ResourceIdentifier } from '../../http/representation/ResourceIdentifier';
@@ -13,7 +13,7 @@ import { isInternalContentType } from '../conversion/ConversionUtil';
 import type { DataAccessor } from './DataAccessor';
 
 interface DataEntry {
-  data: any[];
+  data: unknown[];
   metadata: RepresentationMetadata;
 }
 interface ContainerEntry {
@@ -30,7 +30,7 @@ export class InMemoryDataAccessor implements DataAccessor, SingleThreaded {
   public constructor(identifierStrategy: IdentifierStrategy) {
     this.identifierStrategy = identifierStrategy;
 
-    this.store = { entries: { }};
+    this.store = { entries: {}};
   }
 
   public async canHandle(): Promise<void> {

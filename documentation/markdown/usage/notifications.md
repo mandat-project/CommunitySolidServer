@@ -71,7 +71,7 @@ at `http://localhost:3000/.notifications/WebSocketChannel2023/`:
 
 ```json
 {
-  "@context": ["https://www.w3.org/ns/solid/notification/v1"],
+  "@context": [ "https://www.w3.org/ns/solid/notification/v1" ],
   "type": "http://www.w3.org/ns/solid/notifications#WebSocketChannel2023",
   "topic": "http://localhost:3000/foo"
 }
@@ -126,6 +126,31 @@ The response would then be something like this:
   "sendTo": "https://example.com/webhook"
 }
 ```
+
+### Streaming HTTP
+
+Currently, Streaming HTTP channels are only available as pre-established channels on each resource.
+This means that subscribing and unsubscribing are not supported, and no subscription services are advertised.
+Instead, each resource advertises the `receiveFrom` of its pre-established notification channel using HTTP Link header,
+using `rel="http://www.w3.org/ns/solid/terms#updatesViaStreamingHttp2023"`.
+
+For example, this —
+
+```shell
+curl --head 'http://localhost:3000/foo/'
+```
+
+```http
+HTTP/1.1 200 OK
+Link: <http://localhost:3000/.notifications/StreamingHTTPChannel2023/foo/>; rel="http://www.w3.org/ns/solid/terms#updatesViaStreamingHttp2023"
+```
+
+It is essential to remember that any HTTP request to that `receiveFrom` endpoint requires the same authorization
+as a `GET` request on the resource which advertises it.
+
+Currently, all pre-established Streaming HTTP channels have `Content-Type: text/turtle`.
+
+Information on how to consume Streaming HTTP responses [is available on MDN](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_readable_streams#consuming_a_fetch_as_a_stream)
 
 ## Unsubscribing from a notification channel
 

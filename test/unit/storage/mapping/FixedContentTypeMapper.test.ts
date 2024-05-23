@@ -3,7 +3,7 @@ import { BadRequestHttpError } from '../../../../src/util/errors/BadRequestHttpE
 import { NotFoundHttpError } from '../../../../src/util/errors/NotFoundHttpError';
 import { trimTrailingSlashes } from '../../../../src/util/PathUtil';
 
-jest.mock('fs');
+jest.mock('node:fs');
 
 describe('An FixedContentTypeMapper', (): void => {
   const base = 'http://test.com/';
@@ -25,7 +25,7 @@ describe('An FixedContentTypeMapper', (): void => {
       it('throws 400 if the input path contains relative parts.', async(): Promise<void> => {
         const result = mapper.mapUrlToFilePath({ path: `${base}test/../test2` }, false);
         await expect(result).rejects.toThrow(BadRequestHttpError);
-        await expect(result).rejects.toThrow('Disallowed /.. segment in URL');
+        await expect(result).rejects.toThrow('Disallowed /../ segment in URL');
       });
 
       it('returns the corresponding file path for container identifiers.', async(): Promise<void> => {

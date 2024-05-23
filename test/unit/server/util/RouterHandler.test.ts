@@ -1,8 +1,4 @@
-import type { HttpRequest,
-  HttpResponse,
-  TargetExtractor,
-  ResourceIdentifier,
-  HttpHandler } from '../../../../src';
+import type { HttpHandler, HttpRequest, HttpResponse, ResourceIdentifier, TargetExtractor } from '../../../../src';
 import { joinUrl } from '../../../../src';
 import { RouterHandler } from '../../../../src/server/util/RouterHandler';
 
@@ -18,7 +14,7 @@ describe('A RouterHandler', (): void => {
     request = { method: 'GET', url: '/test' } as any;
 
     targetExtractor = {
-      handleSafe: jest.fn(({ request: req }): ResourceIdentifier => ({ path: joinUrl(baseUrl, req.url!) })),
+      handleSafe: jest.fn(({ request: req }): ResourceIdentifier => ({ path: joinUrl(baseUrl, req.url) })),
     } as any;
 
     handler = {

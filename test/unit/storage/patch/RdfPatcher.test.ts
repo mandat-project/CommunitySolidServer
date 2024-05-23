@@ -1,17 +1,20 @@
+import 'jest-rdf';
 import { DataFactory } from 'n3';
-import type { Quad } from 'rdf-js';
+import type { Quad } from '@rdfjs/types';
 import { BasicRepresentation } from '../../../../src/http/representation/BasicRepresentation';
 import type { Patch } from '../../../../src/http/representation/Patch';
 import type { RdfDatasetRepresentation } from '../../../../src/http/representation/RdfDatasetRepresentation';
 import type { Representation } from '../../../../src/http/representation/Representation';
 import type { ResourceIdentifier } from '../../../../src/http/representation/ResourceIdentifier';
 import { RdfPatcher } from '../../../../src/storage/patch/RdfPatcher';
-import type { RepresentationPatcher,
-  RepresentationPatcherInput } from '../../../../src/storage/patch/RepresentationPatcher';
+import type {
+  RepresentationPatcher,
+  RepresentationPatcherInput,
+} from '../../../../src/storage/patch/RepresentationPatcher';
 import { InternalServerError } from '../../../../src/util/errors/InternalServerError';
 import { readableToQuads } from '../../../../src/util/StreamUtil';
+
 const { quad, namedNode } = DataFactory;
-import 'jest-rdf';
 
 describe('An RdfPatcher,', (): void => {
   let patcher: jest.Mocked<RepresentationPatcher<RdfDatasetRepresentation>>;
@@ -38,7 +41,7 @@ describe('An RdfPatcher,', (): void => {
     };
     patcher.handle.mockImplementation(
       async(input: RepresentationPatcherInput<RdfDatasetRepresentation>):
-      Promise<RdfDatasetRepresentation> => Promise.resolve(input.representation!),
+      Promise<RdfDatasetRepresentation> => input.representation!,
     );
 
     rdfPatcher = new RdfPatcher(patcher);

@@ -1,4 +1,4 @@
-import { posix, win32 } from 'path';
+import { posix, win32 } from 'node:path';
 import { readJson } from 'fs-extra';
 import urljoin from 'url-join';
 import type { TargetExtractor } from '../http/input/identifier/TargetExtractor';
@@ -6,6 +6,7 @@ import type { ResourceIdentifier } from '../http/representation/ResourceIdentifi
 import type { HttpRequest } from '../server/HttpRequest';
 import { BadRequestHttpError } from './errors/BadRequestHttpError';
 import { errorTermsToMetadata } from './errors/HttpErrorUtil';
+import type { Json } from './Json';
 
 /**
  * Changes a potential Windows path into a POSIX path.
@@ -15,7 +16,7 @@ import { errorTermsToMetadata } from './errors/HttpErrorUtil';
  * @returns The potentially changed path (POSIX).
  */
 function windowsToPosixPath(path: string): string {
-  return path.replace(/\\+/gu, '/');
+  return path.replaceAll(/\\+/gu, '/');
 }
 
 /**
@@ -112,6 +113,7 @@ export function trimLeadingSlashes(path: string): string {
 /**
  * Extracts the extension (without dot) from a path.
  * Custom function since `path.extname` does not work on all cases (e.g. ".acl")
+ *
  * @param path - Input path to parse.
  */
 export function getExtension(path: string): string {
@@ -139,7 +141,7 @@ function transformPathComponents(path: string, transform: (part: string) => stri
     .map((part, index): string =>
       index % 2 === 0 ? transform(part) : part.toUpperCase())
     .join('');
-  return !queryString ? transformed : `${transformed}${queryString}`;
+  return queryString ? `${transformed}${queryString}` : transformed;
 }
 
 /**
@@ -149,6 +151,7 @@ function transformPathComponents(path: string, transform: (part: string) => stri
  * the provided path.
  *
  * @param path - The path to convert to its canonical URI path form.
+ *
  * @returns The canonical URI path form of the provided path.
  */
 export function toCanonicalUriPath(path: string): string {
@@ -156,6 +159,7 @@ export function toCanonicalUriPath(path: string): string {
     encodeURIComponent(decodeURIComponent(part)));
 }
 
+/* eslint-disable ts/naming-convention */
 // Characters not allowed in a Windows file path
 const forbiddenSymbols = {
   '<': '%3C',
@@ -167,6 +171,7 @@ const forbiddenSymbols = {
   // `*` does not get converted by `encodeUriComponent`
   '*': '%2A',
 } as const;
+/* eslint-enable ts/naming-convention */
 const forbiddenRegex = new RegExp(`[${Object.keys(forbiddenSymbols).join('')}]`, 'ug');
 /**
  * This function is used when converting a URI to a file path. Decodes all components of a URI path,
@@ -175,6 +180,7 @@ const forbiddenRegex = new RegExp(`[${Object.keys(forbiddenSymbols).join('')}]`,
  * Characters that would result in an illegal file path remain percent encoded.
  *
  * @param path - The path to decode the URI path components of.
+ *
  * @returns A decoded copy of the provided URI path (ignoring encoded slash characters).
  */
 export function decodeUriPathComponents(path: string): string {
@@ -189,6 +195,7 @@ export function decodeUriPathComponents(path: string): string {
  * lead to unnecessary double encoding, resulting in a URI that differs from the expected result.
  *
  * @param path - The path to encode the URI path components of.
+ *
  * @returns An encoded copy of the provided URI path (ignoring encoded slash characters).
  */
 export function encodeUriPathComponents(path: string): string {
@@ -196,7 +203,8 @@ export function encodeUriPathComponents(path: string): string {
 }
 
 /**
- * Checks if the path corresponds to a container path (ending in a /).
+ * Checks whether the path corresponds to a container path (ending in a /).
+ *
  * @param path - Path to check.
  */
 export function isContainerPath(path: string): boolean {
@@ -206,7 +214,8 @@ export function isContainerPath(path: string): boolean {
 }
 
 /**
- * Checks if the identifier corresponds to a container identifier.
+ * Checks whether the identifier corresponds to a container identifier.
+ *
  * @param identifier - Identifier to check.
  */
 export function isContainerIdentifier(identifier: ResourceIdentifier): boolean {
@@ -216,6 +225,7 @@ export function isContainerIdentifier(identifier: ResourceIdentifier): boolean {
 /**
  * Splits a URL (or similar) string into a part containing its scheme and one containing the rest.
  * E.g., `http://test.com/` results in `{ scheme: 'http://', rest: 'test.com/' }`.
+ *
  * @param url - String to parse.
  */
 export function extractScheme(url: string): { scheme: string; rest: string } {
@@ -226,6 +236,7 @@ export function extractScheme(url: string): { scheme: string; rest: string } {
 /**
  * Creates a relative URL by removing the base URL.
  * Will throw an error in case the resulting target is not withing the base URL scope.
+ *
  * @param baseUrl - Base URL.
  * @param request - Incoming request of which the target needs to be extracted.
  * @param targetExtractor - Will extract the target from the request.
@@ -235,8 +246,10 @@ Promise<string> {
   baseUrl = ensureTrailingSlash(baseUrl);
   const target = await targetExtractor.handleSafe({ request });
   if (!target.path.startsWith(baseUrl)) {
-    throw new BadRequestHttpError(`The identifier ${target.path} is outside the configured identifier space.`,
-      { errorCode: 'E0001', metadata: errorTermsToMetadata({ path: target.path }) });
+    throw new BadRequestHttpError(
+      `The identifier ${target.path} is outside the configured identifier space.`,
+      { errorCode: 'E0001', metadata: errorTermsToMetadata({ path: target.path }) },
+    );
   }
   return target.path.slice(baseUrl.length - 1);
 }
@@ -246,11 +259,12 @@ Promise<string> {
  * In case there is a subdomain, the first match of the regular expression will be that subdomain.
  *
  * Examples with baseUrl `http://test.com/foo/`:
- *  - Will match `http://test.com/foo/`
- *  - Will match `http://test.com/foo/bar/baz`
- *  - Will match `http://alice.bob.test.com/foo/bar/baz`, first match result will be `alice.bob`
- *  - Will not match `http://test.com/`
- *  - Will not match `http://alicetest.com/foo/`
+ * - Will match `http://test.com/foo/`
+ * - Will match `http://test.com/foo/bar/baz`
+ * - Will match `http://alice.bob.test.com/foo/bar/baz`, first match result will be `alice.bob`
+ * - Will not match `http://test.com/`
+ * - Will not match `http://alicetest.com/foo/`
+ *
  * @param baseUrl - Base URL for the regular expression.
  */
 export function createSubdomainRegexp(baseUrl: string): RegExp {
@@ -301,8 +315,8 @@ export function resolveAssetPath(path = modulePathPlaceholder): string {
 /**
  * Reads the project package.json and returns it.
  */
-export async function readPackageJson(): Promise<Record<string, any>> {
-  return readJson(resolveModulePath('package.json'));
+export async function readPackageJson(): Promise<Record<string, Json>> {
+  return readJson(resolveModulePath('package.json')) as Promise<Record<string, Json>>;
 }
 
 /**

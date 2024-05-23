@@ -1,7 +1,7 @@
 import type { HttpErrorOptions } from './HttpError';
 import { generateHttpErrorClass } from './HttpError';
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
+// eslint-disable-next-line ts/naming-convention
 const BaseHttpError = generateHttpErrorClass(413, 'PayloadHttpError');
 
 /**
@@ -10,6 +10,7 @@ const BaseHttpError = generateHttpErrorClass(413, 'PayloadHttpError');
 export class PayloadHttpError extends BaseHttpError {
   /**
    * Default message is 'Storage quota was exceeded.'.
+   *
    * @param message - Optional, more specific, message.
    * @param options - Optional error options.
    */

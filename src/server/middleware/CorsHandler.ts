@@ -4,7 +4,8 @@ import type { HttpHandlerInput } from '../HttpHandler';
 import { HttpHandler } from '../HttpHandler';
 
 const defaultOptions: CorsOptions = {
-  origin: (origin: any, callback: any): void => callback(null, origin ?? '*'),
+  origin: (origin: string | undefined, callback: (err: Error | null, origin?: string) => void): void =>
+    callback(null, origin ?? '*'),
 };
 
 // Components.js does not support the full CorsOptions yet
@@ -34,10 +35,10 @@ export class CorsHandler extends HttpHandler {
     req: CorsRequest,
     res: {
       statusCode?: number;
-      setHeader: (key: string, value: string) => any;
-      end: () => any;
+      setHeader: (key: string, value: string) => unknown;
+      end: () => unknown;
     },
-    next: (err?: any) => any,
+    next: (err?: unknown) => unknown,
   ) => void;
 
   public constructor(options: SimpleCorsOptions = {}) {
@@ -47,7 +48,7 @@ export class CorsHandler extends HttpHandler {
 
   public async handle(input: HttpHandlerInput): Promise<void> {
     return new Promise((resolve): void => {
-      this.corsHandler(input.request as any, input.response as any, (): void => resolve());
+      this.corsHandler(input.request, input.response, (): void => resolve());
     });
   }
 }

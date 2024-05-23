@@ -3,15 +3,11 @@ import type Provider from '../../../templates/types/oidc-provider';
 import type { RepresentationMetadata } from '../../http/representation/RepresentationMetadata';
 import { getLoggerFor } from '../../logging/LogUtil';
 import { BadRequestHttpError } from '../../util/errors/BadRequestHttpError';
+import type { Json } from '../../util/Json';
 import type { Interaction } from './InteractionHandler';
 import Dict = NodeJS.Dict;
 
 const logger = getLoggerFor('AccountUtil');
-
-/**
- * A JSON object.
- */
-export type Json = string | number | boolean | Dict<Json> | Json[];
 
 /**
  * Contains a JSON object and any associated metadata.
@@ -53,12 +49,16 @@ export type AccountInteractionResults = { [ACCOUNT_PROMPT]?: string } & Interact
 
 /**
  * Updates the `oidcInteraction` object with the necessary data in case a prompt gets updated.
+ *
  * @param oidcInteraction - Interaction to update.
  * @param result - New data to add to the interaction.
  * @param mergeWithLastSubmission - If this new data needs to be merged with already existing data in the interaction.
  */
-export async function finishInteraction(oidcInteraction: Interaction, result: AccountInteractionResults,
-  mergeWithLastSubmission: boolean): Promise<string> {
+export async function finishInteraction(
+  oidcInteraction: Interaction,
+  result: AccountInteractionResults,
+  mergeWithLastSubmission: boolean,
+): Promise<string> {
   if (mergeWithLastSubmission) {
     result = { ...oidcInteraction.lastSubmission, ...result };
   }
@@ -73,6 +73,7 @@ export async function finishInteraction(oidcInteraction: Interaction, result: Ac
  * Removes the WebID, the `accountId`, from the OIDC session object,
  * allowing us to replace it with a new value.
  * If there is no session in the Interaction, nothing will happen.
+ *
  * @param provider - The OIDC provider.
  * @param oidcInteraction - The current interaction.
  */
@@ -82,5 +83,13 @@ export async function forgetWebId(provider: Provider, oidcInteraction: Interacti
     logger.debug(`Forgetting WebID ${session.accountId} in active session`);
     delete session.accountId;
     await session.persist();
+  }
+
+  // If a client previously successfully completed an interaction, a grant will have been created.
+  // If such a session is reused to authenticate with a different WebID, we need to
+  // first delete the previously created grant, as the oidc-provider will try to reuse it as well.
+  if (oidcInteraction.grantId) {
+    const grant = await provider.Grant.find(oidcInteraction.grantId);
+    await grant?.destroy();
   }
 }

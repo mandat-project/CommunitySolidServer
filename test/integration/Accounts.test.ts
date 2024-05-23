@@ -6,15 +6,27 @@ import type { ResourceStore } from '../../src/storage/ResourceStore';
 import { APPLICATION_X_WWW_FORM_URLENCODED } from '../../src/util/ContentTypes';
 import { joinUrl } from '../../src/util/PathUtil';
 import { getPort } from '../util/Util';
-import { getDefaultVariables, getTestConfigPath, instantiateFromConfig } from './Config';
+import { getDefaultVariables, getTestConfigPath, getTestFolder, instantiateFromConfig, removeFolder } from './Config';
 
 const port = getPort('Accounts');
 const baseUrl = `http://localhost:${port}/`;
 
+const rootFilePath = getTestFolder('Accounts');
+const stores: [string, any][] = [
+  [ 'in-memory storage', {
+    config: 'memory-pod.json',
+    teardown: jest.fn(),
+  }],
+  [ 'on-disk storage', {
+    config: 'file-pod.json',
+    teardown: async(): Promise<void> => removeFolder(rootFilePath),
+  }],
+];
+
 // Don't send actual e-mails
 jest.mock('nodemailer');
 
-describe('A server with account management', (): void => {
+describe.each(stores)('A server with account management using %s', (name, { config, teardown }): void => {
   let app: App;
   let store: ResourceStore;
   let sendMail: jest.Mock;
@@ -42,8 +54,11 @@ describe('A server with account management', (): void => {
 
     const instances = await instantiateFromConfig(
       'urn:solid-server:test:Instances',
-      getTestConfigPath('memory-pod.json'),
-      getDefaultVariables(port, baseUrl),
+      getTestConfigPath(config),
+      {
+        ...getDefaultVariables(port, baseUrl),
+        'urn:solid-server:default:variable:rootFilePath': rootFilePath,
+      },
     ) as Record<string, any>;
     ({ app, store } = instances);
     await app.start();
@@ -51,8 +66,8 @@ describe('A server with account management', (): void => {
     // Create a public container where we can write any data
     await store.setRepresentation(
       { path: joinUrl(publicContainer, '.acl') },
-      new BasicRepresentation(`
-        @prefix acl: <http://www.w3.org/ns/auth/acl#>.
+      new BasicRepresentation(
+        `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
         @prefix foaf: <http://xmlns.com/foaf/0.1/>.
         <#public>
           a acl:Authorization;
@@ -60,13 +75,15 @@ describe('A server with account management', (): void => {
           acl:accessTo <./>;
           acl:default <./>;
           acl:mode acl:Read, acl:Write, acl:Control.`,
-      'text/turtle'),
+        'text/turtle',
+      ),
     );
 
     controls = { main: {}, account: {}, login: {}, password: {}} as any;
   });
 
   afterAll(async(): Promise<void> => {
+    await teardown();
     await app.stop();
   });
 

@@ -9,8 +9,11 @@
  * @param callbackFn - Function that is called for every element.
  * @param thisArg - Value to use as `this` when executing `callbackFn`.
  */
-export function* map<TIn, TOut>(iterable: Iterable<TIn>, callbackFn: (element: TIn, index: number) => TOut,
-  thisArg?: any): Iterable<TOut> {
+export function* map<TIn, TOut>(
+  iterable: Iterable<TIn>,
+  callbackFn: (element: TIn, index: number) => TOut,
+  thisArg?: unknown,
+): Iterable<TOut> {
   const boundMapFn = callbackFn.bind(thisArg);
   let count = 0;
   for (const value of iterable) {
@@ -28,8 +31,11 @@ export function* map<TIn, TOut>(iterable: Iterable<TIn>, callbackFn: (element: T
  * @param callbackFn - Function that is called to test every element.
  * @param thisArg - Value to use as `this` when executing `callbackFn`.
  */
-export function* filter<T>(iterable: Iterable<T>, callbackFn: (element: T, index: number) => boolean,
-  thisArg?: any): Iterable<T> {
+export function* filter<T>(
+  iterable: Iterable<T>,
+  callbackFn: (element: T, index: number) => boolean,
+  thisArg?: unknown,
+): Iterable<T> {
   const boundFilterFn = callbackFn.bind(thisArg);
   let count = 0;
   for (const value of iterable) {
@@ -42,6 +48,7 @@ export function* filter<T>(iterable: Iterable<T>, callbackFn: (element: T, index
 
 /**
  * Creates a new iterable that is a concatenation of all the iterables in the input.
+ *
  * @param iterables - An iterable of which the contents will be concatenated into a new iterable.
  */
 export function* concat<T>(iterables: Iterable<Iterable<T>>): Iterable<T> {
@@ -60,7 +67,7 @@ export function* concat<T>(iterables: Iterable<Iterable<T>>): Iterable<T> {
  * @param callbackFn - Function that is called to test every element.
  * @param thisArg - Value to use as `this` when executing `callbackFn`.
  */
-export function find<T>(iterable: Iterable<T>, callbackFn: (element: T, index: number) => boolean, thisArg?: any):
+export function find<T>(iterable: Iterable<T>, callbackFn: (element: T, index: number) => boolean, thisArg?: unknown):
 T | undefined {
   const boundMapFn = callbackFn.bind(thisArg);
   const count = 0;
@@ -89,10 +96,15 @@ export function reduce<TIn>(iterable: Iterable<TIn>,
  * @param callbackFn - A reducer function.
  * @param initialValue - The value to start from.
  */
-export function reduce<TIn, TOut>(iterable: Iterable<TIn>,
-  callbackFn: (previousValue: TOut, currentValue: TIn, currentIndex: number) => TOut, initialValue: TOut): TOut;
-export function reduce<TIn, TOut>(iterable: Iterable<TIn>,
-  callbackFn: (previousValue: TOut, currentValue: TIn, currentIndex: number) => TOut, initialValue?: TOut): TOut {
+export function reduce<TIn, TOut>(
+  iterable: Iterable<TIn>,
+  callbackFn: (previousValue: TOut, currentValue: TIn, currentIndex: number) => TOut, initialValue: TOut
+): TOut;
+export function reduce<TIn, TOut>(
+  iterable: Iterable<TIn>,
+  callbackFn: (previousValue: TOut, currentValue: TIn, currentIndex: number) => TOut,
+  initialValue?: TOut,
+): TOut {
   const iterator = iterable[Symbol.iterator]();
   let count = 0;
   if (!initialValue) {
@@ -136,8 +148,11 @@ async function nextAsyncEntry<T>(iterator: AsyncIterator<T>): Promise<T | undefi
  * `results` should contain the first result of all these iterators.
  * This array will also be updated, replacing the result of the iterator whose result was chosen by the next one.
  */
-async function findNextSorted<T>(iterators: AsyncIterator<T>[], results: (T | undefined)[],
-  comparator: (left: T, right: T) => number): Promise<T | undefined> {
+async function findNextSorted<T>(
+  iterators: AsyncIterator<T>[],
+  results: (T | undefined)[],
+  comparator: (left: T, right: T) => number,
+): Promise<T | undefined> {
   let best: { idx: number; value: T } | undefined;
   // For every iterator: see if their next result is the best one so far
   for (let i = 0; i < iterators.length; ++i) {
@@ -173,8 +188,12 @@ async function findNextSorted<T>(iterators: AsyncIterator<T>[], results: (T | un
 export async function* sortedAsyncMerge<T>(iterators: AsyncIterator<T>[], comparator?: (left: T, right: T) => number):
 AsyncIterable<T> {
   if (!comparator) {
-    // eslint-disable-next-line @typescript-eslint/no-extra-parens
-    comparator = (left, right): number => left < right ? -1 : (left > right ? 1 : 0);
+    comparator = (left, right): number => {
+      if (left < right) {
+        return -1;
+      }
+      return left > right ? 1 : 0;
+    };
   }
 
   // Initialize the array to the first result of every iterator

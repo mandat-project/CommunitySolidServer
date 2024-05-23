@@ -8,7 +8,7 @@ import { retryFunction } from '../LockUtils';
 import type { PromiseOrValue } from '../PromiseUtil';
 import type { ReadWriteLocker } from './ReadWriteLocker';
 import type { ResourceLocker } from './ResourceLocker';
-import type { RedisResourceLock, RedisReadWriteLock, RedisAnswer } from './scripts/RedisLuaScripts';
+import type { RedisAnswer, RedisReadWriteLock, RedisResourceLock } from './scripts/RedisLuaScripts';
 import { fromResp2ToBool, REDIS_LUA_SCRIPTS } from './scripts/RedisLuaScripts';
 
 const attemptDefaults: Required<AttemptSettings> = { retryCount: -1, retryDelay: 50, retryJitter: 30 };
@@ -19,7 +19,7 @@ const PREFIX_LOCK = '__L__';
 
 export interface RedisSettings {
   /* Override default namespacePrefixes (used to prefix keys in Redis) */
-  namespacePrefix: string;
+  namespacePrefix?: string;
   /* Username used for AUTH on the Redis server */
   username?: string;
   /* Password used for AUTH on the Redis server */
@@ -67,6 +67,7 @@ export class RedisLocker implements ReadWriteLocker, ResourceLocker, Initializab
 
   /**
    * Creates a new RedisClient
+   *
    * @param redisClient - Redis connection string of a standalone Redis node
    * @param attemptSettings - Override default AttemptSettings
    * @param redisSettings - Addition settings used to create the Redis client or to interact with the Redis server
@@ -74,12 +75,13 @@ export class RedisLocker implements ReadWriteLocker, ResourceLocker, Initializab
   public constructor(
     redisClient = '127.0.0.1:6379',
     attemptSettings: AttemptSettings = {},
-    redisSettings: RedisSettings = { namespacePrefix: '' },
+    redisSettings?: RedisSettings,
   ) {
+    redisSettings = { namespacePrefix: '', ...redisSettings };
     const { namespacePrefix, ...options } = redisSettings;
     this.redis = this.createRedisClient(redisClient, options);
     this.attemptSettings = { ...attemptDefaults, ...attemptSettings };
-    this.namespacePrefix = namespacePrefix;
+    this.namespacePrefix = namespacePrefix!;
 
     // Register lua scripts
     for (const [ name, script ] of Object.entries(REDIS_LUA_SCRIPTS)) {
@@ -92,6 +94,7 @@ export class RedisLocker implements ReadWriteLocker, ResourceLocker, Initializab
 
   /**
    * Generate and return a RedisClient based on the provided string
+   *
    * @param redisClientString - A string that contains either a host address and a
    *                            port number like '127.0.0.1:6379' or just a port number like '6379'.
    */
@@ -115,7 +118,9 @@ export class RedisLocker implements ReadWriteLocker, ResourceLocker, Initializab
 
   /**
    * Create a scoped Redis key for Read-Write locking.
+   *
    * @param identifier - The identifier object to create a Redis key for
+   *
    * @returns A scoped Redis key that allows cleanup afterwards without affecting other keys.
    */
   private getReadWriteKey(identifier: ResourceIdentifier): string {
@@ -124,7 +129,9 @@ export class RedisLocker implements ReadWriteLocker, ResourceLocker, Initializab
 
   /**
    * Create a scoped Redis key for Resource locking.
+   *
    * @param identifier - The identifier object to create a Redis key for
+   *
    * @returns A scoped Redis key that allows cleanup afterwards without affecting other keys.
    */
   private getResourceKey(identifier: ResourceIdentifier): string {
@@ -137,6 +144,7 @@ export class RedisLocker implements ReadWriteLocker, ResourceLocker, Initializab
    * Wrapper function for all (un)lock operations. If the `fn()` resolves to false (after applying
    * {@link fromResp2ToBool}, the result will be swallowed. When `fn()` resolves to true, this wrapper
    * will return true. Any error coming from `fn()` will be thrown.
+   *
    * @param fn - The function reference to swallow false from.
    */
   private swallowFalse(fn: () => Promise<RedisAnswer>): () => Promise<unknown> {

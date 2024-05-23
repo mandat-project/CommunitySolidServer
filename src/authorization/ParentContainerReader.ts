@@ -6,7 +6,7 @@ import type { MapEntry } from '../util/map/MapUtil';
 import { modify } from '../util/map/MapUtil';
 import type { PermissionReaderInput } from './PermissionReader';
 import { PermissionReader } from './PermissionReader';
-import type { PermissionMap, PermissionSet, AccessMap } from './permissions/Permissions';
+import type { AccessMap, PermissionMap, PermissionSet } from './permissions/Permissions';
 import { AccessMode } from './permissions/Permissions';
 
 /**
@@ -102,7 +102,9 @@ export class ParentContainerReader extends PermissionReader {
     // When an operation requests to delete a resource,
     // the server MUST match Authorizations allowing the acl:Write access privilege
     // on the resource and the containing container.
-    mergedPermission.delete = resourcePermission.write && containerPermission.write &&
+    mergedPermission.delete =
+      resourcePermission.write &&
+      containerPermission.write &&
       resourcePermission.delete !== false;
 
     return mergedPermission;

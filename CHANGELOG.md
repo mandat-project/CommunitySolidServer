@@ -3,6 +3,86 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.0.5](https://github.com/CommunitySolidServer/CommunitySolidServer/compare/v7.0.4...v7.0.5) (2024-03-25)
+
+### Fixes
+
+* Allow path segments to start with 2 or more dots ([6fe6b6e](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/6fe6b6ec89cfa3c1005ca4cf2219fc77de3fb975))
+* Add priorities to RDF types when converting ([33e9ae4](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/33e9ae41916c9de0638709b02c42936e53d49414))
+* Extract root as possible pod when using subdomains ([8fff08a](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/8fff08a9b60a11c7a7f313c540d9f28a2f96ebc0))
+* Prevent error when switching accounts ([68975e6](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/68975e6627416c248d82150692199db8a5fd0d31))
+* Keep content-type when using metadata templates ([137027e](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/137027e421da9ffa2d2bbc23c08b2a47d4abd328))
+
+## [7.0.4](https://github.com/CommunitySolidServer/CommunitySolidServer/compare/v7.0.3...v7.0.4) (2024-02-07)
+
+### Chores
+
+* Replace rdf-js import with @rdfjs/types ([e09b53b](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/e09b53b20de0e389715d299466a1e1101579dd07))
+
+### Testing
+
+* Remove workaround for authn library ([7d57359](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/7d573596139283637cf2d1e99d44cb2130268811))
+
+## [7.0.3](https://github.com/CommunitySolidServer/CommunitySolidServer/compare/v7.0.2...v7.0.3) (2024-01-05)
+
+### Features
+
+* Support default mainModulePath when creating App ([c6ec45c](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/c6ec45c7c0fb91a1c1365e9a0139e4fdaf8838d6))
+
+### Fixes
+
+* Encode WebID ownership tokens ([277a0d0](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/277a0d0ab724074ed96940836ecc973a8533c538))
+* Fix pod base URL in README template ([4e7929f](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/4e7929f6d2b72fbb0a03e8f6e64955239f41c837))
+* Only require append when creating with PUT ([a0b7ee4](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/a0b7ee42f3a39cdd8fe2dbf1470e53f57ea62aba))
+
+### Chores
+
+* Remove Docker arm builds ([648ce1f](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/648ce1fba8737dc7a008ff987de161e5902f9d09))
+* Update linting dependency ([3a9b0d6](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/3a9b0d69f01d6f0490983eda4ff8000798e10dcc))
+
+### Documentation
+
+* Explain how to use AppRunner to start a server instance ([716c3c3](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/716c3c308933a10382d6726a70b5b77a62cfb787))
+* Explain that users need to log in for client credentials ([dca71bc](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/dca71bc5b82a9790d861babdcb1dd231c99dd042))
+* Fix links ([1f88864](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/1f888645d6619e253082f4bf0ed20e7ae4e4c38b))
+* Describe server feature set ([c64a1a2](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/c64a1a241ddd975f22eb223d545c938dfc8cb63c))
+* Fix Typo `is -> if` ([355f7dd](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/355f7dd1c7b9be14c3e243acb5c4634f3a800442))
+
+### Testing
+
+* Run tests on Node 21 ([8f74fc8](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/8f74fc82ad8a611bf96c293748bc5c01c859cdeb))
+
+## [7.0.2](https://github.com/CommunitySolidServer/CommunitySolidServer/compare/v7.0.1...v7.0.2) (2023-11-20)
+
+### Features
+
+* Add index signature to Credentials ([86f4592](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/86f45923ba6cc696615a98a5fbc8f13a525e4745))
+* Pass requestedModes metadata on 401 ([58daeb6](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/58daeb684f6e84fa0950d0ea5d9827881ba136c2))
+
+### Fixes
+
+* Add query parameter to static resources ([5f85441](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/5f85441b6e23a2bd2b3e1f3ef116a4868d5f9614))
+* Update resource size in ConstantConverter ([6c30a25](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/6c30a2512bd30bf52deb4526d13416016004646f))
+* Prevent errors in JSON storage when data is invalid ([4318479](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/43184791545bbf6fe8a840de07616fca8f3b7f97))
+* Prevent errors during migration for invalid JSON ([2f928bd](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/2f928bd2d4c8d4385bca4554ad0ed19cc5aaa770))
+* Disable submit buttons until form data is loaded ([1597a5a](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/1597a5a5782ca5b574c42ab3bab3d01de89ccf02))
+* Undo util.js errors introduced when changing lint settings ([261c3d0](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/261c3d05a6b446442f2ca5a4a0803363d1cb9021))
+
+### Chores
+
+* Update to TypeScript 5.2.2 ([edbf895](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/edbf895505d625d59404b82807616eebca757040))
+* Fix Dockerfile to Node v18 to prevent build issues ([9cc4a9c](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/9cc4a9ce4d786e76c54d126754271eb2ec1355a5))
+
+### Documentation
+
+* Explain storage/location import options ([01623e0](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/01623e0b5c58d77add4ab3e2a1a9082897ad5948))
+* Fix outdated information in IDP documentation ([#1773](https://github.com/CommunitySolidServer/CommunitySolidServer/issues/1773)) ([15a929a](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/15a929a87e4ce00c0ed266e296405c8e4a22d4a7))
+* Explain the patching store in-depth ([4d05fe4](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/4d05fe4315e282d6e1ec19af01b185cb21cab29c))
+
+### Refactors
+
+* Replace linting configurations ([6248ed0](https://github.com/CommunitySolidServer/CommunitySolidServer/commit/6248ed093813e95255f031eb8fcc37e4d869235c))
+
 ## [7.0.1](https://github.com/CommunitySolidServer/CommunitySolidServer/compare/v7.0.0...v7.0.1) (2023-10-20)
 
 ### Fixes

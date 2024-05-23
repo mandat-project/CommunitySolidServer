@@ -45,8 +45,13 @@ export class WebAclReader extends PermissionReader {
   private readonly identifierStrategy: IdentifierStrategy;
   private readonly accessChecker: AccessChecker;
 
-  public constructor(aclStrategy: AuxiliaryIdentifierStrategy, resourceSet: ResourceSet, aclStore: ResourceStore,
-    identifierStrategy: IdentifierStrategy, accessChecker: AccessChecker) {
+  public constructor(
+    aclStrategy: AuxiliaryIdentifierStrategy,
+    resourceSet: ResourceSet,
+    aclStore: ResourceStore,
+    identifierStrategy: IdentifierStrategy,
+    accessChecker: AccessChecker,
+  ) {
     super();
     this.aclStrategy = aclStrategy;
     this.resourceSet = resourceSet;
@@ -58,7 +63,6 @@ export class WebAclReader extends PermissionReader {
   /**
    * Checks if an agent is allowed to execute the requested actions.
    * Will throw an error if this is not the case.
-   * @param input - Relevant data needed to check if access can be granted.
    */
   public async handle({ credentials, requestedModes }: PermissionReaderInput): Promise<PermissionMap> {
     // Determine the required access modes
@@ -92,6 +96,7 @@ export class WebAclReader extends PermissionReader {
 
   /**
    * Determines the available permissions for the given credentials.
+   *
    * @param acl - Store containing all relevant authorization triples.
    * @param credentials - Credentials to find the permissions for.
    */
@@ -219,6 +224,7 @@ export class WebAclReader extends PermissionReader {
   /**
    * Extracts all rules from the store that are relevant for the given target,
    * based on either the `acl:accessTo` or `acl:default` predicates.
+   *
    * @param store - Store to filter.
    * @param target - The identifier of which the acl rules need to be known.
    * @param directAcl - If the store contains triples from the direct acl resource of the target or not.

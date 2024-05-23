@@ -237,7 +237,6 @@ describe.each(stores)('A Solid server with IDP using %s', (name, { config, teard
   describe('authenticating a client with a WebID', (): void => {
     const clientId = joinUrl(baseUrl, 'client-id');
     const badClientId = joinUrl(baseUrl, 'bad-client-id');
-    /* eslint-disable @typescript-eslint/naming-convention */
     const clientJson = {
       '@context': 'https://www.w3.org/ns/solid/oidc-context.jsonld',
 
@@ -260,7 +259,7 @@ describe.each(stores)('A Solid server with IDP using %s', (name, { config, teard
       client_id: badClientId,
       redirect_uris: [],
     };
-    /* eslint-enable @typescript-eslint/naming-convention */
+
     let state: IdentityTestState;
 
     beforeAll(async(): Promise<void> => {
@@ -393,7 +392,7 @@ describe.each(stores)('A Solid server with IDP using %s', (name, { config, teard
     });
 
     it('can use the generated access token to do an authenticated call.', async(): Promise<void> => {
-      const authFetch = await buildAuthenticatedFetch(fetch, accessToken!, { dpopKey });
+      const authFetch = await buildAuthenticatedFetch(accessToken!, { dpopKey });
       let res = await fetch(container);
       expect(res.status).toBe(401);
       res = await authFetch(container);

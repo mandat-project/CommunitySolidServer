@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'node:fs';
 import {
   ExtensionBasedMapper,
   ExtensionBasedMapperFactory,
@@ -8,7 +8,7 @@ import { NotFoundHttpError } from '../../../../src/util/errors/NotFoundHttpError
 import { NotImplementedHttpError } from '../../../../src/util/errors/NotImplementedHttpError';
 import { trimTrailingSlashes } from '../../../../src/util/PathUtil';
 
-jest.mock('fs');
+jest.mock('node:fs');
 
 describe('An ExtensionBasedMapper', (): void => {
   const base = 'http://test.com/';
@@ -38,7 +38,7 @@ describe('An ExtensionBasedMapper', (): void => {
     it('throws 400 if the input path contains relative parts.', async(): Promise<void> => {
       const result = mapper.mapUrlToFilePath({ path: `${base}test/../test2` }, false);
       await expect(result).rejects.toThrow(BadRequestHttpError);
-      await expect(result).rejects.toThrow('Disallowed /.. segment in URL');
+      await expect(result).rejects.toThrow('Disallowed /../ segment in URL');
     });
 
     it('returns the corresponding file path for container identifiers.', async(): Promise<void> => {
@@ -125,7 +125,8 @@ describe('An ExtensionBasedMapper', (): void => {
       });
     });
 
-    it('falls back to custom extension for unknown types (for which no custom mapping exists).',
+    it(
+      'falls back to custom extension for unknown types (for which no custom mapping exists).',
       async(): Promise<void> => {
         const result = mapper.mapUrlToFilePath({ path: `${base}test` }, false, 'unknown/content-type');
         await expect(result).resolves.toEqual({
@@ -134,7 +135,8 @@ describe('An ExtensionBasedMapper', (): void => {
           contentType: undefined,
           isMetadata: false,
         });
-      });
+      },
+    );
 
     it('supports custom types.', async(): Promise<void> => {
       const customMapper = new ExtensionBasedMapper(base, rootFilepath, { cstm: 'text/custom' });

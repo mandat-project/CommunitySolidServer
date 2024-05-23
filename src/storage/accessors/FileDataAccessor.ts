@@ -1,7 +1,7 @@
-import type { Readable } from 'stream';
+import type { Readable } from 'node:stream';
 import type { Stats } from 'fs-extra';
-import { ensureDir, remove, stat, lstat, createWriteStream, createReadStream, opendir } from 'fs-extra';
-import type { Quad } from 'rdf-js';
+import { createReadStream, createWriteStream, ensureDir, lstat, opendir, remove, stat } from 'fs-extra';
+import type { Quad } from '@rdfjs/types';
 import type { Representation } from '../../http/representation/Representation';
 import { RepresentationMetadata } from '../../http/representation/RepresentationMetadata';
 import type { ResourceIdentifier } from '../../http/representation/ResourceIdentifier';
@@ -12,7 +12,7 @@ import { UnsupportedMediaTypeHttpError } from '../../util/errors/UnsupportedMedi
 import { guardStream } from '../../util/GuardedStream';
 import type { Guarded } from '../../util/GuardedStream';
 import { parseContentType } from '../../util/HeaderUtil';
-import { joinFilePath, isContainerIdentifier, isContainerPath } from '../../util/PathUtil';
+import { isContainerIdentifier, isContainerPath, joinFilePath } from '../../util/PathUtil';
 import { parseQuads, serializeQuads } from '../../util/QuadUtil';
 import { addResourceMetadata, updateModifiedDate } from '../../util/ResourceUtil';
 import { toLiteral, toNamedTerm } from '../../util/TermUtil';
@@ -139,6 +139,7 @@ export class FileDataAccessor implements DataAccessor {
   /**
    * Gets the Stats object corresponding to the given file path,
    * resolving symbolic links.
+   *
    * @param path - File path to get info from.
    *
    * @throws NotFoundHttpError
@@ -188,6 +189,7 @@ export class FileDataAccessor implements DataAccessor {
 
   /**
    * Writes the metadata of the resource to a meta file.
+   *
    * @param link - Path related metadata of the resource.
    * @param metadata - Metadata to write.
    *
@@ -226,6 +228,7 @@ export class FileDataAccessor implements DataAccessor {
 
   /**
    * Generates metadata relevant for any resources stored by this accessor.
+   *
    * @param link - Path related metadata.
    * @param stats - Stats objects of the corresponding directory.
    * @param isContainer - If the path points to a container (directory) or not.
@@ -319,14 +322,17 @@ export class FileDataAccessor implements DataAccessor {
 
   /**
    * Helper function to add file system related metadata.
+   *
    * @param metadata - metadata object to add to
    * @param stats - Stats of the file/directory corresponding to the resource.
    */
   private addPosixMetadata(metadata: RepresentationMetadata, stats: Stats): void {
     updateModifiedDate(metadata, stats.mtime);
-    metadata.add(POSIX.terms.mtime,
+    metadata.add(
+      POSIX.terms.mtime,
       toLiteral(Math.floor(stats.mtime.getTime() / 1000), XSD.terms.integer),
-      SOLID_META.terms.ResponseMetadata);
+      SOLID_META.terms.ResponseMetadata,
+    );
     if (!stats.isDirectory()) {
       metadata.add(POSIX.terms.size, toLiteral(stats.size, XSD.terms.integer), SOLID_META.terms.ResponseMetadata);
     }
@@ -349,11 +355,12 @@ export class FileDataAccessor implements DataAccessor {
 
   /**
    * Helper function without extra validation checking to create a data file.
+   *
    * @param path - The filepath of the file to be created.
    * @param data - The data to be put in the file.
    */
   protected async writeDataFile(path: string, data: Readable): Promise<void> {
-    return new Promise((resolve, reject): any => {
+    return new Promise((resolve, reject): void => {
       const writeStream = createWriteStream(path);
       data.pipe(writeStream);
       data.on('error', (error): void => {

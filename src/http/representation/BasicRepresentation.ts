@@ -1,11 +1,11 @@
-import type { Readable } from 'stream';
+import type { Readable } from 'node:stream';
 import { INTERNAL_QUADS } from '../../util/ContentTypes';
 import type { Guarded } from '../../util/GuardedStream';
 import { guardStream } from '../../util/GuardedStream';
 import { guardedStreamFrom } from '../../util/StreamUtil';
 import type { Representation } from './Representation';
 import type { MetadataIdentifier, MetadataRecord } from './RepresentationMetadata';
-import { RepresentationMetadata, isRepresentationMetadata } from './RepresentationMetadata';
+import { isRepresentationMetadata, RepresentationMetadata } from './RepresentationMetadata';
 
 /**
  * Class with various constructors to facilitate creating a representation.
@@ -35,7 +35,7 @@ export class BasicRepresentation implements Representation {
    * @param binary - Whether the representation is a binary or object stream
    */
   public constructor(
-    data: Guarded<Readable> | Readable | any[] | string,
+    data: Guarded<Readable> | Readable | unknown[] | string,
     metadata: RepresentationMetadata | MetadataRecord,
     binary?: boolean,
   );
@@ -47,7 +47,7 @@ export class BasicRepresentation implements Representation {
    * @param binary - Whether the representation is a binary or object stream
    */
   public constructor(
-    data: Guarded<Readable> | Readable | any[] | string,
+    data: Guarded<Readable> | Readable | unknown[] | string,
     metadata: RepresentationMetadata | MetadataRecord,
     contentType?: string,
     binary?: boolean,
@@ -59,7 +59,7 @@ export class BasicRepresentation implements Representation {
    * @param binary - Whether the representation is a binary or object stream
    */
   public constructor(
-    data: Guarded<Readable> | Readable | any[] | string,
+    data: Guarded<Readable> | Readable | unknown[] | string,
     contentType: string,
     binary?: boolean,
   );
@@ -71,7 +71,7 @@ export class BasicRepresentation implements Representation {
    * @param binary - Whether the representation is a binary or object stream
    */
   public constructor(
-    data: Guarded<Readable> | Readable | any[] | string,
+    data: Guarded<Readable> | Readable | unknown[] | string,
     identifier: MetadataIdentifier,
     metadata?: MetadataRecord,
     binary?: boolean,
@@ -84,14 +84,14 @@ export class BasicRepresentation implements Representation {
    * @param binary - Whether the representation is a binary or object stream
    */
   public constructor(
-    data: Guarded<Readable> | Readable | any[] | string,
+    data: Guarded<Readable> | Readable | unknown[] | string,
     identifier: MetadataIdentifier,
     contentType?: string,
     binary?: boolean,
   );
 
   public constructor(
-    data?: Readable | any[] | string,
+    data?: Readable | unknown[] | string,
     metadata?: RepresentationMetadata | MetadataRecord | MetadataIdentifier | string,
     metadataRest?: MetadataRecord | string | boolean,
     binary?: boolean,
@@ -108,7 +108,8 @@ export class BasicRepresentation implements Representation {
       metadataRest = undefined;
     }
     if (!isRepresentationMetadata(metadata) || typeof metadataRest === 'string') {
-      metadata = new RepresentationMetadata(metadata as any, metadataRest as any);
+      // This combination will always match with a valid overload
+      metadata = new RepresentationMetadata(metadata as RepresentationMetadata, metadataRest as string);
     }
     this.metadata = metadata;
 

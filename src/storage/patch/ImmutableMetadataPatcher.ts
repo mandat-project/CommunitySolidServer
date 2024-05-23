@@ -1,5 +1,5 @@
 import { DataFactory } from 'n3';
-import type { Quad } from 'rdf-js';
+import type { Quad } from '@rdfjs/types';
 import type { AuxiliaryStrategy } from '../../http/auxiliary/AuxiliaryStrategy';
 import type { RdfDatasetRepresentation } from '../../http/representation/RdfDatasetRepresentation';
 import { getLoggerFor } from '../../logging/LogUtil';
@@ -24,8 +24,11 @@ export class ImmutableMetadataPatcher extends RepresentationPatcher<RdfDatasetRe
   private readonly metadataStrategy: AuxiliaryStrategy;
   private readonly immutablePatterns: FilterPattern[];
 
-  public constructor(patcher: RepresentationPatcher<RdfDatasetRepresentation>, metadataStrategy: AuxiliaryStrategy,
-    immutablePatterns: FilterPattern[]) {
+  public constructor(
+    patcher: RepresentationPatcher<RdfDatasetRepresentation>,
+    metadataStrategy: AuxiliaryStrategy,
+    immutablePatterns: FilterPattern[],
+  ) {
     super();
     this.patcher = patcher;
     this.metadataStrategy = metadataStrategy;

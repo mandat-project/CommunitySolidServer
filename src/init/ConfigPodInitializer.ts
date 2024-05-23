@@ -14,6 +14,7 @@ import { Initializer } from './Initializer';
  * Part of the dynamic pod creation.
  * Reads the contents from the configuration storage, uses those values to instantiate ResourceStores,
  * and then adds them to the routing storage.
+ *
  * @see {@link ConfigPodManager}, {@link TemplatedPodGenerator}, {@link BaseUrlRouterRule}
  */
 export class ConfigPodInitializer extends Initializer {
@@ -22,9 +23,11 @@ export class ConfigPodInitializer extends Initializer {
   private readonly configStorage: KeyValueStorage<string, unknown>;
   private readonly routingStorage: KeyValueStorage<string, ResourceStore>;
 
-  public constructor(storeFactory: ComponentsJsFactory,
+  public constructor(
+    storeFactory: ComponentsJsFactory,
     configStorage: KeyValueStorage<string, unknown>,
-    routingStorage: KeyValueStorage<string, ResourceStore>) {
+    routingStorage: KeyValueStorage<string, ResourceStore>,
+  ) {
     super();
     this.storeFactory = storeFactory;
     this.configStorage = configStorage;

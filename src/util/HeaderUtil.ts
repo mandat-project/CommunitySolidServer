@@ -1,4 +1,4 @@
-import type { IncomingHttpHeaders } from 'http';
+import type { IncomingHttpHeaders } from 'node:http';
 import escapeStringRegexp from 'escape-string-regexp';
 import { getLoggerFor } from '../logging/LogUtil';
 import type { HttpResponse } from '../server/HttpResponse';
@@ -11,8 +11,9 @@ import type {
   AcceptHeader,
   AcceptLanguage,
   LinkEntry,
+  LinkEntryParameters,
 } from './Header';
-import { ContentType, SIMPLE_MEDIA_RANGE, QUOTED_STRING, QVALUE, TOKEN } from './Header';
+import { ContentType, QUOTED_STRING, QVALUE, SIMPLE_MEDIA_RANGE, TOKEN } from './Header';
 
 const logger = getLoggerFor('HeaderUtil');
 
@@ -28,17 +29,18 @@ const logger = getLoggerFor('HeaderUtil');
 // HELPER FUNCTIONS
 /**
  * Replaces all double quoted strings in the input string with `"0"`, `"1"`, etc.
+ *
  * @param input - The Accept header string.
  *
- * @throws {@link BadRequestHttpError}
- * Thrown if invalid characters are detected in a quoted string.
- *
  * @returns The transformed string and a map with keys `"0"`, etc. and values the original string that was there.
+ *
+ * @throws BadRequestHttpError
+ * Thrown if invalid characters are detected in a quoted string.
  */
 export function transformQuotedStrings(input: string): { result: string; replacements: Record<string, string> } {
   let idx = 0;
   const replacements: Record<string, string> = {};
-  const result = input.replace(/"(?:[^"\\]|\\.)*"/gu, (match): string => {
+  const result = input.replaceAll(/"(?:[^"\\]|\\.)*"/gu, (match): string => {
     // Not all characters allowed in quoted strings, see BNF above
     if (!QUOTED_STRING.test(match)) {
       logger.warn(`Invalid quoted string in header: ${match}`);
@@ -110,16 +112,17 @@ function handleInvalidValue(message: string, strict: boolean): void | never {
  */
 export function parseParameters(parameters: string[], replacements: Record<string, string>, strict = false):
 { name: string; value: string }[] {
-  return parameters.reduce<{ name: string; value: string }[]>((acc, param): { name: string; value: string }[] => {
+  const parsed: { name: string; value: string }[] = [];
+  for (const param of parameters) {
     const [ name, rawValue ] = param.split('=').map((str): string => str.trim());
 
     // Test replaced string for easier check
     // parameter  = token "=" ( token / quoted-string )
     // second part is optional for certain parameters
     if (!(TOKEN.test(name) && (!rawValue || /^"\d+"$/u.test(rawValue) || TOKEN.test(rawValue)))) {
-      handleInvalidValue(`Invalid parameter value: ${name}=${replacements[rawValue] || rawValue} ` +
-        `does not match (token ( "=" ( token / quoted-string ))?). `, strict);
-      return acc;
+      handleInvalidValue(`Invalid parameter value: ${name}=${replacements[rawValue] || rawValue
+      } does not match (token ( "=" ( token / quoted-string ))?). `, strict);
+      continue;
     }
 
     let value = rawValue;
@@ -127,9 +130,9 @@ export function parseParameters(parameters: string[], replacements: Record<strin
       value = replacements[rawValue];
     }
 
-    acc.push({ name, value });
-    return acc;
-  }, []);
+    parsed.push({ name, value });
+  }
+  return parsed;
 }
 
 /**
@@ -143,7 +146,7 @@ export function parseParameters(parameters: string[], replacements: Record<strin
  * @param replacements - The double quoted strings that need to be replaced.
  * @param strict - Determines if invalid values throw errors (`true`) or log warnings (`false`). Defaults to `false`.
  *
- * @returns {@link Accept | undefined} object corresponding to the header string, or
+ * @returns An object corresponding to the header string, or
  * undefined if an invalid type or sub-type is detected.
  */
 function parseAcceptPart(part: string, replacements: Record<string, string>, strict: boolean): Accept | undefined {
@@ -152,7 +155,8 @@ function parseAcceptPart(part: string, replacements: Record<string, string>, str
   // No reason to test differently for * since we don't check if the type exists
   if (!SIMPLE_MEDIA_RANGE.test(range)) {
     handleInvalidValue(
-      `Invalid Accept range: ${range} does not match ( "*/*" / ( token "/" "*" ) / ( token "/" token ) )`, strict,
+      `Invalid Accept range: ${range} does not match ( "*/*" / ( token "/" "*" ) / ( token "/" token ) )`,
+      strict,
     );
     return;
   }
@@ -162,7 +166,7 @@ function parseAcceptPart(part: string, replacements: Record<string, string>, str
   const extensionParams: Record<string, string> = {};
   let map = mediaTypeParams;
   const parsedParams = parseParameters(parameters, replacements);
-  parsedParams.forEach(({ name, value }): void => {
+  for (const { name, value } of parsedParams) {
     if (name === 'q') {
       // Extension parameters appear after the q value
       map = extensionParams;
@@ -173,13 +177,16 @@ function parseAcceptPart(part: string, replacements: Record<string, string>, str
       weight = parseQValue(value);
     } else {
       if (!value && map !== extensionParams) {
-        handleInvalidValue(`Invalid Accept parameter ${name}: ` +
-          `Accept parameter values are not optional when preceding the q value`, strict);
-        return;
+        handleInvalidValue(
+          `Invalid Accept parameter ${name}: ` +
+          `Accept parameter values are not optional when preceding the q value`,
+          strict,
+        );
+        continue;
       }
       map[name] = value || '';
     }
-  });
+  }
 
   return {
     range,
@@ -194,6 +201,7 @@ function parseAcceptPart(part: string, replacements: Record<string, string>, str
 /**
  * Parses an Accept-* header where each part is only a value and a weight, so roughly /.*(q=.*)?/ separated by commas.
  * The returned weights default to 1 if no q value is found or the q value is invalid.
+ *
  * @param input - Input header string.
  * @param strict - Determines if invalid values throw errors (`true`) or log warnings (`false`). Defaults to `false`.
  *
@@ -236,17 +244,15 @@ export function parseAccept(input: string, strict = false): Accept[] {
   // Quoted strings could prevent split from having correct results
   const { result, replacements } = transformQuotedStrings(input);
 
-  return splitAndClean(result)
-    .reduce<Accept[]>((acc, part): Accept[] => {
+  const accepts: Accept[] = [];
+  for (const part of splitAndClean(result)) {
     const partOrUndef = parseAcceptPart(part, replacements, strict);
 
     if (partOrUndef !== undefined) {
-      acc.push(partOrUndef);
+      accepts.push(partOrUndef);
     }
-
-    return acc;
-  }, [])
-    .sort((left, right): number => right.weight - left.weight);
+  }
+  return accepts.sort((left, right): number => right.weight - left.weight);
 }
 
 /**
@@ -263,7 +269,8 @@ export function parseAcceptCharset(input: string, strict = false): AcceptCharset
   return results.filter((result): boolean => {
     if (!TOKEN.test(result.range)) {
       handleInvalidValue(
-        `Invalid Accept-Charset range: ${result.range} does not match (content-coding / "identity" / "*")`, strict,
+        `Invalid Accept-Charset range: ${result.range} does not match (content-coding / "identity" / "*")`,
+        strict,
       );
       return false;
     }
@@ -306,7 +313,8 @@ export function parseAcceptLanguage(input: string, strict = false): AcceptLangua
     // (1*8ALPHA *("-" 1*8alphanum)) / "*"
     if (result.range !== '*' && !/^[a-zA-Z]{1,8}(?:-[a-zA-Z0-9]{1,8})*$/u.test(result.range)) {
       handleInvalidValue(
-        `Invalid Accept-Language range: ${result.range} does not match ((1*8ALPHA *("-" 1*8alphanum)) / "*")`, strict,
+        `Invalid Accept-Language range: ${result.range} does not match ((1*8ALPHA *("-" 1*8alphanum)) / "*")`,
+        strict,
       );
       return false;
     }
@@ -365,10 +373,10 @@ export function addHeader(response: HttpResponse, name: string, value: string | 
  *
  * @param input - The Content-Type header string.
  *
- * @throws {@link BadRequestHttpError}
- * Thrown on invalid header syntax.
- *
  * @returns A {@link ContentType} object containing the value and optional parameters.
+ *
+ * @throws BadRequestHttpError
+ * Thrown on invalid header syntax.
  */
 export function parseContentType(input: string): ContentType {
   // Quoted strings could prevent split from having correct results
@@ -379,14 +387,11 @@ export function parseContentType(input: string): ContentType {
     throw new BadRequestHttpError(`Invalid content-type: ${value} does not match ( token "/" token )`);
   }
 
-  return parseParameters(params, replacements)
-    .reduce<ContentType>(
-    (prev, cur): ContentType => {
-      prev.parameters[cur.name] = cur.value;
-      return prev;
-    },
-    new ContentType(value),
-  );
+  const contentType = new ContentType(value);
+  for (const param of parseParameters(params, replacements)) {
+    contentType.parameters[param.name] = param.value;
+  }
+  return contentType;
 }
 
 /**
@@ -435,6 +440,7 @@ export function parseForwarded(headers: IncomingHttpHeaders): Forwarded {
  * Parses the link header(s) and returns an array of LinkEntry objects.
  *
  * @param link - A single link header or an array of link headers
+ *
  * @returns A LinkEntry array, LinkEntry contains a link and a params Record&lt;string,string&gt;
  */
 export function parseLinkHeader(link: string | string[] = []): LinkEntry[] {
@@ -455,7 +461,7 @@ export function parseLinkHeader(link: string | string[] = []): LinkEntry[] {
       //     present but MUST NOT appear more than once in a given link-value;
       //     occurrences after the first MUST be ignored by parsers.
       //
-      const params: any = {};
+      const params: Record<string, string> = {};
       for (const { name, value } of parseParameters(parameters, replacements)) {
         if (name === 'rel' && 'rel' in params) {
           continue;
@@ -468,7 +474,7 @@ export function parseLinkHeader(link: string | string[] = []): LinkEntry[] {
         continue;
       }
 
-      links.push({ target: target.slice(1, -1), parameters: params });
+      links.push({ target: target.slice(1, -1), parameters: params as LinkEntryParameters });
     }
   }
   return links;
@@ -481,6 +487,7 @@ const authSchemeRegexCache: Map<string, RegExp> = new Map();
  *
  * @param scheme - Name of the authorization scheme (case insensitive).
  * @param authorization - The value of the Authorization header (may be undefined).
+ *
  * @returns True if the Authorization header uses the specified scheme, false otherwise.
  */
 export function matchesAuthorizationScheme(scheme: string, authorization?: string): boolean {
@@ -496,7 +503,8 @@ export function matchesAuthorizationScheme(scheme: string, authorization?: strin
  * Checks if the scheme part of the specified url matches at least one of the provided options.
  *
  * @param url - A string representing the URL.
- * @param schemes - Scheme value options (the function will check if at least one matches the URL scheme).
+ * @param schemes - Scheme value options (the function will check whether at least one matches the URL scheme).
+ *
  * @returns True if the URL scheme matches at least one of the provided options, false otherwise.
  */
 export function hasScheme(url: string, ...schemes: string[]): boolean {

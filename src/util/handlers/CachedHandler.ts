@@ -12,7 +12,7 @@ type NestedMap<TOut> = TOut | WeakMap<object, NestedMap<TOut>>;
  * This also means that the cache key needs to be an object.
  * Errors will be thrown in case a primitive is used.
  */
-export class CachedHandler<TIn extends Record<string, any>, TOut = void> extends AsyncHandler<TIn, TOut> {
+export class CachedHandler<TIn extends Record<string, unknown>, TOut = void> extends AsyncHandler<TIn, TOut> {
   private readonly source: AsyncHandler<TIn, TOut>;
   private readonly fields?: [keyof TIn, ...(keyof TIn)[]];
 
@@ -70,7 +70,7 @@ export class CachedHandler<TIn extends Record<string, any>, TOut = void> extends
       return [ input ];
     }
 
-    return this.fields.map((field): object => input[field]) as [object, ...object[]];
+    return this.fields.map((field): object => input[field] as object) as [object, ...object[]];
   }
 
   /**

@@ -1,4 +1,4 @@
-import { createInterface } from 'readline';
+import { createInterface } from 'node:readline';
 import { ACCOUNT_STORAGE_DESCRIPTION } from '../../identity/interaction/account/util/BaseAccountStore';
 import type { AccountLoginStorage } from '../../identity/interaction/account/util/LoginStorage';
 import { ACCOUNT_TYPE } from '../../identity/interaction/account/util/LoginStorage';
@@ -68,11 +68,13 @@ export interface V6MigrationInitializerArgs {
   /**
    * Storages for which all entries need to be removed.
    */
+  // eslint-disable-next-line ts/no-explicit-any
   cleanupStorages: KeyValueStorage<string, any>[];
   /**
    * The storage that will contain the account data in the new format.
+   * Wrong typings to prevent Components.js typing issues.
    */
-  newAccountStorage: AccountLoginStorage<any>;
+  newAccountStorage: AccountLoginStorage<Record<string, never>>;
   /**
    * The storage that will contain the setup entries in the new format.
    */
@@ -100,7 +102,7 @@ export class V6MigrationInitializer extends Initializer {
 
   private readonly accountStorage: KeyValueStorage<string, Account | Settings>;
   private readonly clientCredentialsStorage: KeyValueStorage<string, ClientCredentials>;
-  private readonly cleanupStorages: KeyValueStorage<string, any>[];
+  private readonly cleanupStorages: KeyValueStorage<string, unknown>[];
 
   private readonly newAccountStorage: AccountLoginStorage<typeof STORAGE_DESCRIPTION>;
   private readonly newSetupStorage: KeyValueStorage<string, string>;
@@ -113,7 +115,7 @@ export class V6MigrationInitializer extends Initializer {
     this.accountStorage = args.accountStorage;
     this.clientCredentialsStorage = args.clientCredentialsStorage;
     this.cleanupStorages = args.cleanupStorages;
-    this.newAccountStorage = args.newAccountStorage;
+    this.newAccountStorage = args.newAccountStorage as unknown as AccountLoginStorage<typeof STORAGE_DESCRIPTION>;
     this.newSetupStorage = args.newSetupStorage;
   }
 
@@ -220,14 +222,18 @@ export class V6MigrationInitializer extends Initializer {
 
     const { id: accountId } = await this.newAccountStorage.create(ACCOUNT_TYPE, {});
     // The `toLowerCase` call is important here to have the expected value
-    await this.newAccountStorage.create(PASSWORD_STORAGE_TYPE,
-      { email: email.toLowerCase(), password, verified, accountId });
+    await this.newAccountStorage.create(
+      PASSWORD_STORAGE_TYPE,
+      { email: email.toLowerCase(), password, verified, accountId },
+    );
     if (settings.useIdp) {
       await this.newAccountStorage.create(WEBID_STORAGE_TYPE, { webId, accountId });
     }
     if (settings.podBaseUrl) {
-      const { id: podId } = await this.newAccountStorage.create(POD_STORAGE_TYPE,
-        { baseUrl: settings.podBaseUrl, accountId });
+      const { id: podId } = await this.newAccountStorage.create(
+        POD_STORAGE_TYPE,
+        { baseUrl: settings.podBaseUrl, accountId },
+      );
       await this.newAccountStorage.create(OWNER_STORAGE_TYPE, { webId, podId, visible: false });
     }
 

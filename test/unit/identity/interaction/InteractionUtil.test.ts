@@ -1,7 +1,9 @@
 import type { Interaction } from '../../../../src/identity/interaction/InteractionHandler';
 import type { AccountInteractionResults } from '../../../../src/identity/interaction/InteractionUtil';
 import {
-  assertOidcInteraction, finishInteraction, forgetWebId,
+  assertOidcInteraction,
+  finishInteraction,
+  forgetWebId,
 } from '../../../../src/identity/interaction/InteractionUtil';
 import { BadRequestHttpError } from '../../../../src/util/errors/BadRequestHttpError';
 import type Provider from '../../../../templates/types/oidc-provider';
@@ -77,11 +79,15 @@ describe('InteractionUtil', (): void => {
 
     beforeEach(async(): Promise<void> => {
       provider = {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         Session: {
           find: jest.fn().mockResolvedValue({
             accountId: 'accountId',
             persist: jest.fn(),
+          }),
+        },
+        Grant: {
+          find: jest.fn().mockResolvedValue({
+            destroy: jest.fn(),
           }),
         },
       } as any;
@@ -89,9 +95,21 @@ describe('InteractionUtil', (): void => {
 
     it('removes the accountId from the session.', async(): Promise<void> => {
       await expect(forgetWebId(provider, oidcInteraction)).resolves.toBeUndefined();
+      expect(provider.Session.find).toHaveBeenCalledTimes(1);
+      expect(provider.Session.find).toHaveBeenLastCalledWith('cookie');
       const session = await (provider.Session.find as jest.Mock).mock.results[0].value;
       expect(session.accountId).toBeUndefined();
       expect(session.persist).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes the grant if there is one associated to the session.', async(): Promise<void> => {
+      delete oidcInteraction.session;
+      oidcInteraction.grantId = 'grantId';
+      await expect(forgetWebId(provider, oidcInteraction)).resolves.toBeUndefined();
+      expect(provider.Grant.find).toHaveBeenCalledTimes(1);
+      expect(provider.Grant.find).toHaveBeenLastCalledWith('grantId');
+      const grant = await (provider.Grant.find as jest.Mock).mock.results[0].value;
+      expect(grant.destroy).toHaveBeenCalledTimes(1);
     });
   });
 });

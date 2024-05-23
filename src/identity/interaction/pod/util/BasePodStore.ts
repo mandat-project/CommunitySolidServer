@@ -36,16 +36,18 @@ export class BasePodStore extends Initializer implements PodStore {
 
   private readonly storage: AccountLoginStorage<{
     [POD_STORAGE_TYPE]: typeof POD_STORAGE_DESCRIPTION;
-    [OWNER_STORAGE_TYPE]: typeof OWNER_STORAGE_DESCRIPTION; }>;
+    [OWNER_STORAGE_TYPE]: typeof OWNER_STORAGE_DESCRIPTION;
+  }>;
 
   private readonly manager: PodManager;
   private readonly visible: boolean;
 
   private initialized = false;
 
-  public constructor(storage: AccountLoginStorage<any>, manager: PodManager, visible = false) {
+  // Wrong typings to prevent Components.js typing issues
+  public constructor(storage: AccountLoginStorage<Record<string, never>>, manager: PodManager, visible = false) {
     super();
-    this.storage = storage;
+    this.storage = storage as unknown as typeof this.storage;
     this.visible = visible;
     this.manager = manager;
   }
@@ -63,8 +65,7 @@ export class BasePodStore extends Initializer implements PodStore {
       await this.storage.createIndex(OWNER_STORAGE_TYPE, 'podId');
       this.initialized = true;
     } catch (cause: unknown) {
-      throw new InternalServerError(`Error defining pods in storage: ${createErrorMessage(cause)}`,
-        { cause });
+      throw new InternalServerError(`Error defining pods in storage: ${createErrorMessage(cause)}`, { cause });
     }
   }
 

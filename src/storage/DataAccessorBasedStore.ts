@@ -1,6 +1,6 @@
+import type { NamedNode, Quad, Term } from '@rdfjs/types';
 import arrayifyStream from 'arrayify-stream';
 import { DataFactory } from 'n3';
-import type { NamedNode, Term } from 'rdf-js';
 import { v4 as uuid } from 'uuid';
 import type { AuxiliaryStrategy } from '../http/auxiliary/AuxiliaryStrategy';
 import { BasicRepresentation } from '../http/representation/BasicRepresentation';
@@ -25,27 +25,27 @@ import {
   ensureTrailingSlash,
   isContainerIdentifier,
   isContainerPath,
-  trimTrailingSlashes,
   toCanonicalUriPath,
+  trimTrailingSlashes,
 } from '../util/PathUtil';
 import { addResourceMetadata, updateModifiedDate } from '../util/ResourceUtil';
 import {
-  DC,
-  SOLID_HTTP,
-  LDP,
-  POSIX,
-  PIM,
-  RDF,
-  XSD,
-  SOLID_META,
-  PREFERRED_PREFIX_TERM,
-  CONTENT_TYPE_TERM,
-  SOLID_AS,
   AS,
+  CONTENT_TYPE_TERM,
+  DC,
+  LDP,
+  PIM,
+  POSIX,
+  PREFERRED_PREFIX_TERM,
+  RDF,
+  SOLID_AS,
+  SOLID_HTTP,
+  SOLID_META,
+  XSD,
 } from '../util/Vocabularies';
 import type { DataAccessor } from './accessors/DataAccessor';
 import type { Conditions } from './conditions/Conditions';
-import type { ResourceStore, ChangeMap } from './ResourceStore';
+import type { ChangeMap, ResourceStore } from './ResourceStore';
 import namedNode = DataFactory.namedNode;
 
 /**
@@ -79,8 +79,12 @@ export class DataAccessorBasedStore implements ResourceStore {
   private readonly auxiliaryStrategy: AuxiliaryStrategy;
   private readonly metadataStrategy: AuxiliaryStrategy;
 
-  public constructor(accessor: DataAccessor, identifierStrategy: IdentifierStrategy,
-    auxiliaryStrategy: AuxiliaryStrategy, metadataStrategy: AuxiliaryStrategy) {
+  public constructor(
+    accessor: DataAccessor,
+    identifierStrategy: IdentifierStrategy,
+    auxiliaryStrategy: AuxiliaryStrategy,
+    metadataStrategy: AuxiliaryStrategy,
+  ) {
     this.accessor = accessor;
     this.identifierStrategy = identifierStrategy;
     this.auxiliaryStrategy = auxiliaryStrategy;
@@ -151,7 +155,9 @@ export class DataAccessorBasedStore implements ResourceStore {
       representation = new BasicRepresentation(data, metadata, INTERNAL_QUADS);
     } else if (isMetadata) {
       representation = new BasicRepresentation(
-        metadata.quads(), this.metadataStrategy.getAuxiliaryIdentifier(identifier), INTERNAL_QUADS,
+        metadata.quads(),
+        this.metadataStrategy.getAuxiliaryIdentifier(identifier),
+        INTERNAL_QUADS,
       );
     } else {
       representation = new BasicRepresentation(await this.accessor.getData(identifier), metadata);
@@ -200,8 +206,11 @@ export class DataAccessorBasedStore implements ResourceStore {
     return this.writeData(newID, representation, isContainer, false, false);
   }
 
-  public async setRepresentation(identifier: ResourceIdentifier, representation: Representation,
-    conditions?: Conditions): Promise<ChangeMap> {
+  public async setRepresentation(
+    identifier: ResourceIdentifier,
+    representation: Representation,
+    conditions?: Conditions,
+  ): Promise<ChangeMap> {
     this.validateIdentifier(identifier);
 
     // Check if the resource already exists
@@ -256,8 +265,7 @@ export class DataAccessorBasedStore implements ResourceStore {
     return this.writeData(identifier, representation, isContainer, !oldMetadata, Boolean(oldMetadata));
   }
 
-  public async modifyResource(identifier: ResourceIdentifier, patch: Patch,
-    conditions?: Conditions): Promise<never> {
+  public async modifyResource(identifier: ResourceIdentifier, patch: Patch, conditions?: Conditions): Promise<never> {
     if (conditions) {
       let metadata: RepresentationMetadata | undefined;
       try {
@@ -295,8 +303,10 @@ export class DataAccessorBasedStore implements ResourceStore {
       const subjectIdentifier = this.auxiliaryStrategy.getSubjectIdentifier(identifier);
       const parentMetadata = await this.accessor.getMetadata(subjectIdentifier);
       if (this.isRootStorage(parentMetadata)) {
-        throw new MethodNotAllowedHttpError([ 'DELETE' ],
-          `Cannot delete ${identifier.path} from a root storage container.`);
+        throw new MethodNotAllowedHttpError(
+          [ 'DELETE' ],
+`Cannot delete ${identifier.path} from a root storage container.`,
+        );
       }
     }
 
@@ -364,8 +374,9 @@ export class DataAccessorBasedStore implements ResourceStore {
    * then the other URI MUST NOT correspond to another resource."
    * https://solid.github.io/specification/protocol#uri-slash-semantics
    *
-   * First the identifier gets requested and if no result is found
+   * First the identifier gets requested. If no result is found,
    * the identifier with differing trailing slash is requested.
+   *
    * @param identifier - Identifier that needs to be checked.
    */
   protected async getNormalizedMetadata(identifier: ResourceIdentifier): Promise<RepresentationMetadata> {
@@ -401,6 +412,7 @@ export class DataAccessorBasedStore implements ResourceStore {
 
   /**
    * Write the given metadata resource to the DataAccessor.
+   *
    * @param identifier - Identifier of the metadata.
    * @param representation - Corresponding Representation.
    *
@@ -427,7 +439,7 @@ export class DataAccessorBasedStore implements ResourceStore {
 
     // Transform representation data to quads and add them to the metadata object
     const metadata = new RepresentationMetadata(subjectIdentifier);
-    const quads = await arrayifyStream(representation.data);
+    const quads: Quad[] = await arrayifyStream(representation.data);
     metadata.addQuads(quads);
 
     // Remove the response metadata as this must not be stored
@@ -440,7 +452,8 @@ export class DataAccessorBasedStore implements ResourceStore {
 
   /**
    * Write the given resource to the DataAccessor. Metadata will be updated with necessary triples.
-   * In case of containers `handleContainerData` will be used to verify the data.
+   * For containers, `handleContainerData` will be used to verify the data.
+   *
    * @param identifier - Identifier of the resource.
    * @param representation - Corresponding Representation.
    * @param isContainer - Is the incoming resource a container?
@@ -449,8 +462,13 @@ export class DataAccessorBasedStore implements ResourceStore {
    *
    * @returns Identifiers of resources that were possibly modified.
    */
-  protected async writeData(identifier: ResourceIdentifier, representation: Representation, isContainer: boolean,
-    createContainers: boolean, exists: boolean): Promise<ChangeMap> {
+  protected async writeData(
+    identifier: ResourceIdentifier,
+    representation: Representation,
+    isContainer: boolean,
+    createContainers: boolean,
+    exists: boolean,
+  ): Promise<ChangeMap> {
     // Make sure the metadata has the correct identifier and correct type quads
     // Need to do this before handling container data to have the correct identifier
     representation.metadata.identifier = DataFactory.namedNode(identifier.path);
@@ -561,6 +579,7 @@ export class DataAccessorBasedStore implements ResourceStore {
   /**
    * Validates if the slug and headers are valid.
    * Errors if slug exists, ends on slash, but ContainerType Link header is NOT present
+   *
    * @param isContainer - Is the slug supposed to represent a container?
    * @param slug - Is the requested slug (if any).
    */
@@ -571,8 +590,9 @@ export class DataAccessorBasedStore implements ResourceStore {
   }
 
   /**
-   * Clean http Slug to be compatible with the server. Makes sure there are no unwanted characters
-   * e.g.: cleanslug('&%26') returns '%26%26'
+   * Clean http Slug to be compatible with the server. Makes sure there are no unwanted characters,
+   * e.g., cleanslug('&%26') returns '%26%26'
+   *
    * @param slug - the slug to clean
    */
   protected cleanSlug(slug: string): string {
@@ -616,8 +636,9 @@ export class DataAccessorBasedStore implements ResourceStore {
   }
 
   /**
-   * Checks if the given metadata represents a (potential) container,
+   * Checks whether the given metadata represents a (potential) container,
    * based on the metadata.
+   *
    * @param metadata - Metadata of the (new) resource.
    */
   protected isContainerType(metadata: RepresentationMetadata): boolean {
@@ -672,6 +693,7 @@ export class DataAccessorBasedStore implements ResourceStore {
   /**
    * Create containers starting from the root until the given identifier corresponds to an existing container.
    * Will throw errors if the identifier of the last existing "container" corresponds to an existing document.
+   *
    * @param container - Identifier of the container which will need to exist.
    */
   protected async createRecursiveContainers(container: ResourceIdentifier): Promise<ChangeMap> {
@@ -704,6 +726,7 @@ export class DataAccessorBasedStore implements ResourceStore {
 
   /**
    * Generates activity metadata for a resource and adds it to the {@link ChangeMap}
+   *
    * @param map - ChangeMap to update.
    * @param id - Identifier of the resource being changed.
    * @param activity - Which activity is taking place.
@@ -714,6 +737,7 @@ export class DataAccessorBasedStore implements ResourceStore {
 
   /**
    * Generates activity metadata specifically for Add/Remove events on a container.
+   *
    * @param map - ChangeMap to update.
    * @param id - Identifier of the container.
    * @param add - If there is a resource being added (`true`) or removed (`false`).

@@ -1,6 +1,5 @@
-/* eslint-disable function-paren-newline */
 import { DataFactory } from 'n3';
-import type { NamedNode } from 'rdf-js';
+import type { NamedNode } from '@rdfjs/types';
 
 /**
  * A `Record` in which each value is a concatenation of the baseUrl and its key.
@@ -15,7 +14,7 @@ type ValueVocabulary<TBase extends string, TLocal extends string> =
 /**
  * A {@link ValueVocabulary} where the URI values are {@link NamedNode}s.
  */
-type TermVocabulary<T> = T extends ValueVocabulary<any, any> ? {[K in keyof T]: NamedNode<T[K]> } : never;
+type TermVocabulary<T> = T extends ValueVocabulary<string, string> ? {[K in keyof T]: NamedNode<T[K]> } : never;
 
 /**
  * Contains a namespace and keys linking to the entries in this namespace.
@@ -36,22 +35,22 @@ export type PartialVocabulary<TBase extends string> =
 /**
  * A local name of a {@link Vocabulary}.
  */
-export type VocabularyLocal<T> = T extends Vocabulary<any, infer TKey> ? TKey : never;
+export type VocabularyLocal<T> = T extends Vocabulary<string, infer TKey> ? TKey : never;
 /**
  * A URI string entry of a {@link Vocabulary}.
  */
-export type VocabularyValue<T> = T extends Vocabulary<any, infer TKey> ? T[TKey] : never;
+export type VocabularyValue<T> = T extends Vocabulary<string, infer TKey> ? T[TKey] : never;
 /**
  * A {@link NamedNode} entry of a {@link Vocabulary}.
  */
-export type VocabularyTerm<T> = T extends Vocabulary<any, infer TKey> ? T['terms'][TKey] : never;
+export type VocabularyTerm<T> = T extends Vocabulary<string, infer TKey> ? T['terms'][TKey] : never;
 
 /**
  * Creates a {@link ValueVocabulary} with the given `baseUri` as namespace and all `localNames` as entries.
  */
 function createValueVocabulary<TBase extends string, TLocal extends string>(baseUri: TBase, localNames: TLocal[]):
 ValueVocabulary<TBase, TLocal> {
-  const expanded: Partial<ExpandedRecord<TBase, TLocal>> = { };
+  const expanded: Partial<ExpandedRecord<TBase, TLocal>> = {};
   // Expose the listed local names as properties
   for (const localName of localNames) {
     expanded[localName] = `${baseUri}${localName}`;
@@ -78,8 +77,8 @@ TermVocabulary<ValueVocabulary<TBase, TLocal>> {
  * The values are the local names expanded from the given base URI as strings.
  * The `terms` field contains all the same values but as {@link NamedNode} instead.
  */
-export function createVocabulary<TBase extends string, TLocal extends string>(baseUri: TBase,
-  ...localNames: TLocal[]): string extends TLocal ? PartialVocabulary<TBase> : Vocabulary<TBase, TLocal> {
+export function createVocabulary<TBase extends string, TLocal extends string>(baseUri: TBase, ...localNames: TLocal[]):
+string extends TLocal ? PartialVocabulary<TBase> : Vocabulary<TBase, TLocal> {
   const values = createValueVocabulary(baseUri, localNames);
   return {
     ...values,
@@ -89,11 +88,14 @@ export function createVocabulary<TBase extends string, TLocal extends string>(ba
 
 /**
  * Creates a new {@link Vocabulary} that extends an existing one by adding new local names.
+ *
  * @param vocabulary - The {@link Vocabulary} to extend.
  * @param newNames - The new local names that need to be added.
  */
 export function extendVocabulary<TBase extends string, TLocal extends string, TNew extends string>(
-  vocabulary: Vocabulary<TBase, TLocal>, ...newNames: TNew[]):
+  vocabulary: Vocabulary<TBase, TLocal>,
+  ...newNames: TNew[]
+):
   ReturnType<typeof createVocabulary<TBase, TLocal | TNew>> {
   const localNames = Object.keys(vocabulary)
     .filter((key): boolean => key !== 'terms' && key !== 'namespace') as TLocal[];
@@ -101,7 +103,8 @@ export function extendVocabulary<TBase extends string, TLocal extends string, TN
   return createVocabulary(vocabulary.namespace, ...allNames);
 }
 
-export const ACL = createVocabulary('http://www.w3.org/ns/auth/acl#',
+export const ACL = createVocabulary(
+  'http://www.w3.org/ns/auth/acl#',
   'accessTo',
   'agent',
   'agentClass',
@@ -117,11 +120,14 @@ export const ACL = createVocabulary('http://www.w3.org/ns/auth/acl#',
   'Control',
 );
 
-export const ACP = createVocabulary('http://www.w3.org/ns/solid/acp#',
+export const ACP = createVocabulary(
+  'http://www.w3.org/ns/solid/acp#',
+
   // Used for ACP middleware headers
   'AccessControlResource',
   'grant',
   'attribute',
+
   // Access Control Resource
   'resource',
   'accessControl',
@@ -144,8 +150,10 @@ export const ACP = createVocabulary('http://www.w3.org/ns/solid/acp#',
   'vc',
 );
 
-export const AS = createVocabulary('https://www.w3.org/ns/activitystreams#',
+export const AS = createVocabulary(
+  'https://www.w3.org/ns/activitystreams#',
   'object',
+  'target',
 
   'Add',
   'Create',
@@ -154,37 +162,46 @@ export const AS = createVocabulary('https://www.w3.org/ns/activitystreams#',
   'Update',
 );
 
-export const AUTH = createVocabulary('urn:solid:auth:',
+export const AUTH = createVocabulary(
+  'urn:solid:auth:',
   'userMode',
   'publicMode',
 );
 
-export const DC = createVocabulary('http://purl.org/dc/terms/',
+export const DC = createVocabulary(
+  'http://purl.org/dc/terms/',
   'description',
   'modified',
   'title',
 );
 
-export const FOAF = createVocabulary('http://xmlns.com/foaf/0.1/',
+export const FOAF = createVocabulary(
+  'http://xmlns.com/foaf/0.1/',
   'Agent',
 );
 
-export const HH = createVocabulary('http://www.w3.org/2011/http-headers#',
+export const HH = createVocabulary(
+  'http://www.w3.org/2011/http-headers#',
   'content-length',
   'etag',
 );
 
-export const HTTP = createVocabulary('http://www.w3.org/2011/http#',
+export const HTTP = createVocabulary(
+  'http://www.w3.org/2011/http#',
   'statusCodeNumber',
 );
 
-export const IANA = createVocabulary('http://www.w3.org/ns/iana/media-types/');
+export const IANA = createVocabulary(
+  'http://www.w3.org/ns/iana/media-types/',
+);
 
-export const JSON_LD = createVocabulary('http://www.w3.org/ns/json-ld#',
+export const JSON_LD = createVocabulary(
+  'http://www.w3.org/ns/json-ld#',
   'context',
 );
 
-export const LDP = createVocabulary('http://www.w3.org/ns/ldp#',
+export const LDP = createVocabulary(
+  'http://www.w3.org/ns/ldp#',
   'contains',
 
   'BasicContainer',
@@ -192,11 +209,13 @@ export const LDP = createVocabulary('http://www.w3.org/ns/ldp#',
   'Resource',
 );
 
-export const MA = createVocabulary('http://www.w3.org/ns/ma-ont#',
+export const MA = createVocabulary(
+  'http://www.w3.org/ns/ma-ont#',
   'format',
 );
 
-export const NOTIFY = createVocabulary('http://www.w3.org/ns/solid/notifications#',
+export const NOTIFY = createVocabulary(
+  'http://www.w3.org/ns/solid/notifications#',
   'accept',
   'channelType',
   'endAt',
@@ -213,30 +232,37 @@ export const NOTIFY = createVocabulary('http://www.w3.org/ns/solid/notifications
 
   'WebhookChannel2023',
   'WebSocketChannel2023',
+  'StreamingHTTPChannel2023',
 );
 
-export const OIDC = createVocabulary('http://www.w3.org/ns/solid/oidc#',
+export const OIDC = createVocabulary(
+  'http://www.w3.org/ns/solid/oidc#',
   'redirect_uris',
 );
 
-export const PIM = createVocabulary('http://www.w3.org/ns/pim/space#',
+export const PIM = createVocabulary(
+  'http://www.w3.org/ns/pim/space#',
   'Storage',
 );
 
-export const POSIX = createVocabulary('http://www.w3.org/ns/posix/stat#',
+export const POSIX = createVocabulary(
+  'http://www.w3.org/ns/posix/stat#',
   'mtime',
   'size',
 );
 
-export const RDF = createVocabulary('http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+export const RDF = createVocabulary(
+  'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
   'type',
 );
 
-export const RDFS = createVocabulary('http://www.w3.org/2000/01/rdf-schema#',
+export const RDFS = createVocabulary(
+  'http://www.w3.org/2000/01/rdf-schema#',
   'label',
 );
 
-export const SOLID = createVocabulary('http://www.w3.org/ns/solid/terms#',
+export const SOLID = createVocabulary(
+  'http://www.w3.org/ns/solid/terms#',
   'deletes',
   'inserts',
   'oidcIssuer',
@@ -248,24 +274,29 @@ export const SOLID = createVocabulary('http://www.w3.org/ns/solid/terms#',
   'InsertDeletePatch',
 );
 
-export const SOLID_AS = createVocabulary('urn:npm:solid:community-server:activity:',
+export const SOLID_AS = createVocabulary(
+  'urn:npm:solid:community-server:activity:',
   'activity',
 );
 
-export const SOLID_ERROR = createVocabulary('urn:npm:solid:community-server:error:',
+export const SOLID_ERROR = createVocabulary(
+  'urn:npm:solid:community-server:error:',
   'disallowedMethod',
   'errorCode',
   'errorResponse',
   'stack',
+  'target',
 );
 
 // Used to pass parameters to error templates
-export const SOLID_ERROR_TERM = createVocabulary('urn:npm:solid:community-server:error-term:',
+export const SOLID_ERROR_TERM = createVocabulary(
+  'urn:npm:solid:community-server:error-term:',
   // Identifier of the resource responsible for the error
   'path',
 );
 
-export const SOLID_HTTP = createVocabulary('urn:npm:solid:community-server:http:',
+export const SOLID_HTTP = createVocabulary(
+  'urn:npm:solid:community-server:http:',
   'accountCookie',
   // When the above cookie expires, expects an ISO date string
   'accountCookieExpiration',
@@ -277,7 +308,8 @@ export const SOLID_HTTP = createVocabulary('urn:npm:solid:community-server:http:
   'unit',
 );
 
-export const SOLID_META = createVocabulary('urn:npm:solid:community-server:meta:',
+export const SOLID_META = createVocabulary(
+  'urn:npm:solid:community-server:meta:',
   // This identifier is used as graph for all metadata that is generated on the fly and should not be stored
   'ResponseMetadata',
   // This is used to identify templates that can be used for the representation of a resource
@@ -287,17 +319,24 @@ export const SOLID_META = createVocabulary('urn:npm:solid:community-server:meta:
   'value',
   // This is used to indicate whether metadata should be preserved or not during a PUT operation
   'preserve',
+  // These predicates are used to describe the requested access in case of an unauthorized request
+  'requestedAccess',
+  'accessTarget',
+  'accessMode',
 );
 
-export const VANN = createVocabulary('http://purl.org/vocab/vann/',
+export const VANN = createVocabulary(
+  'http://purl.org/vocab/vann/',
   'preferredNamespacePrefix',
 );
 
-export const VCARD = createVocabulary('http://www.w3.org/2006/vcard/ns#',
+export const VCARD = createVocabulary(
+  'http://www.w3.org/2006/vcard/ns#',
   'hasMember',
 );
 
-export const XSD = createVocabulary('http://www.w3.org/2001/XMLSchema#',
+export const XSD = createVocabulary(
+  'http://www.w3.org/2001/XMLSchema#',
   'dateTime',
   'duration',
   'integer',

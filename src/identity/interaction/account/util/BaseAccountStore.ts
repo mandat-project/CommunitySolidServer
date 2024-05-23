@@ -3,7 +3,7 @@ import { getLoggerFor } from '../../../../logging/LogUtil';
 import type { ValueType } from '../../../../storage/keyvalue/IndexedStorage';
 import { createErrorMessage } from '../../../../util/errors/ErrorUtil';
 import { InternalServerError } from '../../../../util/errors/InternalServerError';
-import type { AccountStore, AccountSettings } from './AccountStore';
+import type { AccountSettings, AccountStore } from './AccountStore';
 import { ACCOUNT_SETTINGS_REMEMBER_LOGIN } from './AccountStore';
 import type { AccountLoginStorage } from './LoginStorage';
 import { ACCOUNT_TYPE } from './LoginStorage';
@@ -22,9 +22,10 @@ export class BaseAccountStore extends Initializer implements AccountStore {
   private readonly storage: AccountLoginStorage<{ [ACCOUNT_TYPE]: typeof ACCOUNT_STORAGE_DESCRIPTION }>;
   private initialized = false;
 
-  public constructor(storage: AccountLoginStorage<any>) {
+  // Wrong typings to prevent Components.js typing issues
+  public constructor(storage: AccountLoginStorage<Record<string, never>>) {
     super();
-    this.storage = storage;
+    this.storage = storage as unknown as typeof this.storage;
   }
 
   // Initialize the type definitions

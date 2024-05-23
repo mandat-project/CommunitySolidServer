@@ -9,19 +9,22 @@ import { LDP } from '../../src/util/Vocabularies';
 /**
  * This is specifically for GET requests which are expected to succeed.
  */
-export async function getResource(url: string,
+export async function getResource(
+  url: string,
   options?: { accept?: string },
-  expected?: { contentType?: string }): Promise<Response> {
+  expected?: { contentType?: string },
+): Promise<Response> {
   const isContainer = isContainerPath(url);
   const response = await fetch(url, { headers: options });
   expect(response.status).toBe(200);
   expect(response.headers.get('link')).toContain(`<${LDP.Resource}>; rel="type"`);
   expect(response.headers.get('link')).toContain(`<${url}.acl>; rel="acl"`);
-  expect(response.headers.get('accept-patch')).toBe('text/n3, application/sparql-update');
 
   if (isContainer) {
     expect(response.headers.get('link')).toContain(`<${LDP.Container}>; rel="type"`);
     expect(response.headers.get('link')).toContain(`<${LDP.BasicContainer}>; rel="type"`);
+  } else {
+    expect(response.headers.get('accept-patch')).toBe('text/n3, application/sparql-update');
   }
   if (expected?.contentType) {
     expect(response.headers.get('content-type')).toBe(expected.contentType);

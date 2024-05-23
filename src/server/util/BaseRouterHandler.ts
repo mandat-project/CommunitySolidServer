@@ -5,7 +5,7 @@ import type { AsyncHandlerInput, AsyncHandlerOutput } from '../../util/handlers/
 import { AsyncHandler } from '../../util/handlers/AsyncHandler';
 import { trimTrailingSlashes } from '../../util/PathUtil';
 
-export interface BaseRouterHandlerArgs<T extends AsyncHandler<any, any>> {
+export interface BaseRouterHandlerArgs<T extends AsyncHandler<unknown, unknown>> {
   /**
    * The base URL of the server.
    * Not required if no value is provided for `allowedPathNames`.
@@ -36,7 +36,7 @@ export interface BaseRouterHandlerArgs<T extends AsyncHandler<any, any>> {
  *
  * `canHandleInput` expects a ResourceIdentifier to indicate it expects the target to have been validated already.
  */
-export abstract class BaseRouterHandler<T extends AsyncHandler<any, any>>
+export abstract class BaseRouterHandler<T extends AsyncHandler<unknown, unknown>>
   extends AsyncHandler<AsyncHandlerInput<T>, AsyncHandlerOutput<T>> {
   protected readonly baseUrlLength: number;
   protected readonly handler: T;
@@ -47,7 +47,7 @@ export abstract class BaseRouterHandler<T extends AsyncHandler<any, any>>
   protected constructor(args: BaseRouterHandlerArgs<T>) {
     super();
     if (typeof args.allowedPathNames !== 'undefined' && typeof args.baseUrl !== 'string') {
-      throw new Error('A value for allowedPathNames requires baseUrl to be defined.');
+      throw new TypeError('A value for allowedPathNames requires baseUrl to be defined.');
     }
     // Trimming trailing slash so regexes can start with `/`
     this.baseUrlLength = trimTrailingSlashes(args.baseUrl ?? '').length;
@@ -70,6 +70,6 @@ export abstract class BaseRouterHandler<T extends AsyncHandler<any, any>>
   }
 
   public async handle(input: AsyncHandlerInput<T>): Promise<AsyncHandlerOutput<T>> {
-    return this.handler.handle(input);
+    return this.handler.handle(input) as Promise<AsyncHandlerOutput<T>>;
   }
 }

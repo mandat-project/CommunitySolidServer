@@ -1,4 +1,4 @@
-import { hash, compare } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { Initializer } from '../../../../init/Initializer';
 import { getLoggerFor } from '../../../../logging/LogUtil';
 import { BadRequestHttpError } from '../../../../util/errors/BadRequestHttpError';
@@ -29,9 +29,10 @@ export class BasePasswordStore extends Initializer implements PasswordStore {
   private readonly saltRounds: number;
   private initialized = false;
 
-  public constructor(storage: AccountLoginStorage<any>, saltRounds = 10) {
+  // Wrong typings to prevent Components.js typing issues
+  public constructor(storage: AccountLoginStorage<Record<string, never>>, saltRounds = 10) {
     super();
-    this.storage = storage;
+    this.storage = storage as unknown as typeof this.storage;
     this.saltRounds = saltRounds;
   }
 
@@ -46,8 +47,10 @@ export class BasePasswordStore extends Initializer implements PasswordStore {
       await this.storage.createIndex(PASSWORD_STORAGE_TYPE, 'email');
       this.initialized = true;
     } catch (cause: unknown) {
-      throw new InternalServerError(`Error defining email/password in storage: ${createErrorMessage(cause)}`,
-        { cause });
+      throw new InternalServerError(
+        `Error defining email/password in storage: ${createErrorMessage(cause)}`,
+        { cause },
+      );
     }
   }
 

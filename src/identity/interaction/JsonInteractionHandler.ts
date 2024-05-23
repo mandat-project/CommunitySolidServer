@@ -1,8 +1,9 @@
 import type { RepresentationMetadata } from '../../http/representation/RepresentationMetadata';
 import type { ResourceIdentifier } from '../../http/representation/ResourceIdentifier';
 import { AsyncHandler } from '../../util/handlers/AsyncHandler';
+import type { Json } from '../../util/Json';
 import type { Interaction } from './InteractionHandler';
-import type { Json, JsonRepresentation } from './InteractionUtil';
+import type { JsonRepresentation } from './InteractionUtil';
 import Dict = NodeJS.Dict;
 
 export interface JsonInteractionHandlerInput {
@@ -38,4 +39,4 @@ export interface JsonInteractionHandlerInput {
  * designed to be used for IDP/OIDC interactions.
  */
 export abstract class JsonInteractionHandler<TOut extends Dict<Json> = Dict<Json>>
-  extends AsyncHandler<JsonInteractionHandlerInput, JsonRepresentation<TOut>> { }
+  extends AsyncHandler<JsonInteractionHandlerInput, JsonRepresentation<TOut>> {}

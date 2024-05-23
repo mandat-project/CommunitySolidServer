@@ -13,7 +13,7 @@ import { AccessMode } from './permissions/Permissions';
 /**
  * Authorizer that bases its decision on the output it gets from its PermissionReader.
  * For each permission it checks if the reader allows that for at least one credential type,
- * if yes authorization is granted.
+ * if yes, authorization is granted.
  * `undefined` values for reader results are interpreted as `false`.
  */
 export class PermissionBasedAuthorizer extends Authorizer {
@@ -24,6 +24,7 @@ export class PermissionBasedAuthorizer extends Authorizer {
   /**
    * The existence of the target resource determines the output status code for certain situations.
    * The provided {@link ResourceSet} will be used for that.
+   *
    * @param resourceSet - {@link ResourceSet} that can verify the target resource existence.
    */
   public constructor(resourceSet: ResourceSet) {
@@ -37,7 +38,9 @@ export class PermissionBasedAuthorizer extends Authorizer {
     // Ensure all required modes are within the agent's permissions.
     for (const [ identifier, modes ] of requestedModes.entrySets()) {
       const modeString = [ ...modes ].join(',');
-      this.logger.debug(`Checking if ${credentials.agent?.webId} has ${modeString} permissions for ${identifier.path}`);
+      this.logger.debug(
+        `Checking if ${JSON.stringify(credentials)} has ${modeString} permissions for ${identifier.path}`,
+      );
       const permissionSet = availablePermissions.get(identifier) ?? {};
       for (const mode of modes) {
         try {
@@ -57,8 +60,12 @@ export class PermissionBasedAuthorizer extends Authorizer {
    *
    * Otherwise, deny access based on existing grounds.
    */
-  private async reportAccessError(identifier: ResourceIdentifier, modes: ReadonlySet<AccessMode>,
-    permissionSet: PermissionSet, cause: unknown): Promise<never> {
+  private async reportAccessError(
+    identifier: ResourceIdentifier,
+    modes: ReadonlySet<AccessMode>,
+    permissionSet: PermissionSet,
+    cause: unknown,
+  ): Promise<never> {
     const exposeExistence = permissionSet[AccessMode.read];
     if (exposeExistence && !modes.has(AccessMode.create) && !await this.resourceSet.hasResource(identifier)) {
       throw new NotFoundHttpError();
@@ -71,6 +78,7 @@ export class PermissionBasedAuthorizer extends Authorizer {
    * Ensures that at least one of the credentials provides permissions for the given mode.
    * Throws a {@link ForbiddenHttpError} or {@link UnauthorizedHttpError} depending on the credentials
    * if access is not allowed.
+   *
    * @param credentials - Credentials that require access.
    * @param permissionSet - PermissionSet describing the available permissions of the credentials.
    * @param mode - Which mode is requested.
@@ -78,7 +86,7 @@ export class PermissionBasedAuthorizer extends Authorizer {
   private requireModePermission(credentials: Credentials, permissionSet: PermissionSet, mode: AccessMode): void {
     if (!permissionSet[mode]) {
       if (this.isAuthenticated(credentials)) {
-        this.logger.warn(`Agent ${credentials.agent!.webId} has no ${mode} permissions`);
+        this.logger.warn(`Agent ${JSON.stringify(credentials)} has no ${mode} permissions`);
         throw new ForbiddenHttpError();
       } else {
         // Solid, §2.1: "When a client does not provide valid credentials when requesting a resource that requires it,
@@ -92,9 +100,10 @@ export class PermissionBasedAuthorizer extends Authorizer {
 
   /**
    * Checks whether the agent is authenticated (logged in) or not (public/anonymous).
+   *
    * @param credentials - Credentials to check.
    */
   private isAuthenticated(credentials: Credentials): boolean {
-    return typeof credentials.agent?.webId === 'string';
+    return Object.values(credentials).some((cred): boolean => cred !== undefined);
   }
 }

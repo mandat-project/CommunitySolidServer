@@ -1,6 +1,5 @@
-/* eslint-disable unicorn/no-process-exit */
-import { existsSync } from 'fs';
-import type { WriteStream } from 'tty';
+import { existsSync } from 'node:fs';
+import type { WriteStream } from 'node:tty';
 import type { IComponentsManagerBuilderOptions } from 'componentsjs';
 import { ComponentsManager } from 'componentsjs';
 import { readJSON } from 'fs-extra';
@@ -9,7 +8,7 @@ import { LOG_LEVELS } from '../logging/LogLevel';
 import { getLoggerFor } from '../logging/LogUtil';
 import { createErrorMessage, isError } from '../util/errors/ErrorUtil';
 import { InternalServerError } from '../util/errors/InternalServerError';
-import { resolveModulePath, resolveAssetPath, joinFilePath } from '../util/PathUtil';
+import { joinFilePath, resolveAssetPath, resolveModulePath } from '../util/PathUtil';
 import type { App } from './App';
 import type { CliExtractor } from './cli/CliExtractor';
 import type { CliResolver } from './CliResolver';
@@ -36,13 +35,17 @@ const ENV_VAR_PREFIX = 'CSS';
 export interface AppRunnerInput {
   /**
    * Properties that will be used when building the Components.js manager.
-   * Sets `typeChecking` to false by default as the server components will result in errors otherwise.
+   * Default values:
+   *  - `typeChecking`: `false`, as the server components would otherwise error.
+   *  - `mainModulePath`: `@css:`, which resolves to the directory of the CSS package.
+   *                      This is useful for packages that depend on the CSS
+   *                      but do not create any new modules themselves.
    */
-  loaderProperties: IComponentsManagerBuilderOptions<App>;
+  loaderProperties?: Partial<IComponentsManagerBuilderOptions<App>>;
   /**
-   * Path to the server config file(s).
+   * Path to the server config file(s). Defaults to `@css:config/default.json`.
    */
-  config: string | string[];
+  config?: string | string[];
   /**
    * Values to apply to the Components.js variables.
    * These are the variables CLI values will be converted to.
@@ -87,23 +90,28 @@ export class AppRunner {
    *
    * @param input - All values necessary to configure the server.
    */
-  public async create(input: AppRunnerInput): Promise<App> {
+  public async create(input: AppRunnerInput = {}): Promise<App> {
     const loaderProperties = {
       typeChecking: false,
+      mainModulePath: '@css:',
+      dumpErrorState: false,
       ...input.loaderProperties,
     };
+    // Expand mainModulePath as needed
+    loaderProperties.mainModulePath = resolveAssetPath(loaderProperties.mainModulePath);
 
-    // Potentially expand file paths as needed
-    const configs = (Array.isArray(input.config) ? input.config : [ input.config ]).map(resolveAssetPath);
+    // Potentially expand config paths as needed
+    let configs = input.config ?? [ '@css:config/default.json' ];
+    configs = (Array.isArray(configs) ? configs : [ configs ]).map(resolveAssetPath);
 
-    let componentsManager: ComponentsManager<any>;
+    let componentsManager: ComponentsManager<App | CliResolver>;
     try {
-      componentsManager = await this.createComponentsManager<any>(loaderProperties, configs);
+      componentsManager = await this.createComponentsManager<App>(loaderProperties, configs);
     } catch (error: unknown) {
-      this.resolveError(`Could not build the config files from ${configs}`, error);
+      this.resolveError(`Could not build the config files from ${configs.join(',')}`, error);
     }
 
-    const cliResolver = await this.createCliResolver(componentsManager);
+    const cliResolver = await this.createCliResolver(componentsManager as ComponentsManager<CliResolver>);
     let extracted: Shorthand = {};
     if (input.argv) {
       extracted = await this.extractShorthand(cliResolver.cliExtractor, input.argv);
@@ -115,7 +123,10 @@ export class AppRunner {
 
     // Create the application using the translated variable values.
     // `variableBindings` override those resolved from the `shorthand` input.
-    return this.createApp(componentsManager, { ...parsedVariables, ...input.variableBindings });
+    return this.createApp(
+      componentsManager as ComponentsManager<App>,
+      { ...parsedVariables, ...input.variableBindings },
+    );
   }
 
   /**
@@ -126,12 +137,14 @@ export class AppRunner {
    * This is only relevant when this is used to start as a Node.js application on its own,
    * if you use this as part of your code you probably want to use the async version.
    *
-   * @param argv - Command line arguments.
-   * @param stderr - Stream that should be used to output errors before the logger is enabled.
+   * @param argv - Input parameters.
+   * @param argv.argv - Command line arguments.
+   * @param argv.stderr - Stream that should be used to output errors before the logger is enabled.
    */
   public runCliSync({ argv, stderr = process.stderr }: { argv?: CliArgv; stderr?: WriteStream }): void {
     this.runCli(argv).catch((error): never => {
       stderr.write(createErrorMessage(error));
+      // eslint-disable-next-line unicorn/no-process-exit
       process.exit(1);
     });
   }
@@ -174,8 +187,8 @@ export class AppRunner {
 
     const params = await yargv.parse();
 
-    const loaderProperties: IComponentsManagerBuilderOptions<App> = {
-      mainModulePath: resolveAssetPath(params.mainModulePath),
+    const loaderProperties: AppRunnerInput['loaderProperties'] = {
+      mainModulePath: params.mainModulePath,
       logLevel: params.loggingLevel,
     };
 
@@ -190,6 +203,7 @@ export class AppRunner {
   /**
    * Retrieves settings from package.json or configuration file when
    * part of an npm project.
+   *
    * @returns The settings defined in the configuration file
    */
   public async getPackageSettings(): Promise<undefined | Record<string, unknown>> {
@@ -203,20 +217,20 @@ export class AppRunner {
     // First see if there is a dedicated .json configuration file
     const cssConfigPath = joinFilePath(process.cwd(), '.community-solid-server.config.json');
     if (existsSync(cssConfigPath)) {
-      return readJSON(cssConfigPath);
+      return readJSON(cssConfigPath) as Promise<Record<string, unknown>>;
     }
 
     // Next see if there is a dedicated .js file
     const cssConfigPathJs = joinFilePath(process.cwd(), '.community-solid-server.config.js');
     if (existsSync(cssConfigPathJs)) {
-      return import(cssConfigPathJs);
+      return import(cssConfigPathJs) as Promise<Record<string, unknown>>;
     }
 
-    // Finally try and read from the config.community-solid-server
+    // Finally try to read from the config.community-solid-server
     // field in the root package.json
-    const pkg = await readJSON(packageJsonPath);
+    const pkg = await readJSON(packageJsonPath) as { config?: Record<string, unknown> };
     if (typeof pkg.config?.['community-solid-server'] === 'object') {
-      return pkg.config['community-solid-server'];
+      return pkg.config['community-solid-server'] as Record<string, unknown>;
     }
   }
 
