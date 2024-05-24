@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS build
+FROM node:lts-alpine AS build
 
 # Set current working directory
 WORKDIR /community-server
@@ -13,17 +13,17 @@ RUN npm ci --unsafe-perm && npm run build
 
 
 # Runtime stage
-FROM node:18-alpine
+FROM node:lts-alpine
 
 # Add contact informations for questions about the container
 LABEL maintainer="Solid Community Server Docker Image Maintainer <thomas.dupont@ugent.be>"
 
+# Container config & data dir for volume sharing
+# Defaults to filestorage with /data directory (passed through CMD below)
+RUN mkdir /config /data
+
 # Set current directory
 WORKDIR /community-server
-
-# Container data dir for volume sharing
-# Defaults to filestorage with /data directory (passed through CMD below)
-RUN mkdir data
 
 # Copy runtime files from build stage
 COPY --from=build /community-server/package.json .
@@ -41,5 +41,5 @@ ENTRYPOINT [ "node", "bin/server.js" ]
 
 # By default run in filemode (overriden if passing alternative arguments or env vars)
 ENV CSS_CONFIG=config/css-mashlib.json
-ENV CSS_ROOT_FILE_PATH=/community-server/data
+ENV CSS_ROOT_FILE_PATH=/data
 ENV CSS_BASE_URL=https://solid.aifb.kit.edu

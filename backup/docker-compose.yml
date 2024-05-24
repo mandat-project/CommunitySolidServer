@@ -1,0 +1,17 @@
+version: '3.7'
+services:
+  css:
+    # build CSS+Mashlib
+    build: .
+
+    # this ensures automatic container start, when host reboots
+    restart: always
+
+    ports:
+      - 1080:3000
+
+    volumes:
+      # mount local directories to the container
+      - /solid-server/data/:/community-server/data/
+
+  
