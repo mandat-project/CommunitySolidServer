@@ -11,6 +11,21 @@
           "eTagHandler": { "@id": "urn:solid-server:default:ETagHandler" }
         },
         {
+          "@type": "CreatorPostOperationHandler",
+          "store": { "@id": "urn:solid-server:default:ResourceStore"  },
+          "creatorContainerNamesAndModes": [
+            ["demands", [
+              "Read",
+              "Append"
+            ]]
+          ],
+          "aclStrategy": { "@id": "urn:solid-server:default:AclStrategy" },
+          "credentialsExtractor": { "@id": "urn:solid-server:default:CredentialsExtractor" },
+          "resourceSet": { "@id": "urn:solid-server:default:CachedResourceSet" },
+          "identifierStrategy": { "@id": "urn:solid-server:default:IdentifierStrategy" },
+          "aclStore": { "@id": "urn:solid-server:default:ResourceStore" }
+        },
+        {
           "@type": "PostOperationHandler",
           "store": { "@id": "urn:solid-server:default:ResourceStore"  }
         },

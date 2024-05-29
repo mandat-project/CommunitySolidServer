@@ -93,6 +93,7 @@ export * from './http/ldp/HeadOperationHandler';
 export * from './http/ldp/OperationHandler';
 export * from './http/ldp/PatchOperationHandler';
 export * from './http/ldp/PostOperationHandler';
+export * from './http/ldp/CreatorPostOperationHandler';
 export * from './http/ldp/PutOperationHandler';
 
 // HTTP/Output/Error

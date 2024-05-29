@@ -1,4 +1,10 @@
-# Community Solid Server
+# Community Solid Server - MANDAT Fork
+
+## Features added for MANDAT
+- A handler for POST requests (creating a resource) that allows the creator of the resource to automatically have access to the resource by creating the corresponding ACL ([further explanation](/documentation/markdown/mandat/creator-post-handler.md))
+
+
+## Community Solid Server
 
 <img src="https://raw.githubusercontent.com/CommunitySolidServer/CommunitySolidServer/main/templates/images/solid.svg"
  alt="[Solid logo]" height="150" align="right"/>
