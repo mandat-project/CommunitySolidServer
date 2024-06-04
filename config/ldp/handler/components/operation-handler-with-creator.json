@@ -16,6 +16,10 @@
           "creatorContainerNamesAndModes": [
             ["demands", [
               "Read",
+              "Write"
+            ]],
+	    ["orders", [
+              "Read",
               "Append"
             ]]
           ],
