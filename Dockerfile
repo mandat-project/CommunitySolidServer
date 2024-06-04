@@ -15,9 +15,6 @@ RUN npm ci --unsafe-perm && npm run build
 # Runtime stage
 FROM node:18-alpine
 
-# Add contact informations for questions about the container
-LABEL maintainer="Solid Community Server Docker Image Maintainer <thomas.dupont@ugent.be>"
-
 # Set current directory
 WORKDIR /community-server
 
@@ -40,6 +37,6 @@ EXPOSE 3000
 ENTRYPOINT [ "node", "bin/server.js" ]
 
 # By default run in filemode (overriden if passing alternative arguments or env vars)
-ENV CSS_CONFIG=config/css-mashlib.json
+ENV CSS_CONFIG=/community-server/config/css-mashlib.json
 ENV CSS_ROOT_FILE_PATH=/community-server/data
 ENV CSS_BASE_URL=https://solid.aifb.kit.edu
